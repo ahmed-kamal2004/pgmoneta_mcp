@@ -24,4 +24,106 @@
 // TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+use anyhow::anyhow;
+use aes_gcm::{Aes256Gcm, Nonce};
+use aes_gcm::aead::{Aead, KeyInit};
+use base64::{Engine as _, alphabet, engine::{self, general_purpose}};
+use home::home_dir;
+use rand::TryRngCore;
+use scrypt::{scrypt, Params};
+use std::fs;
+use zeroize::Zeroize;
 
+const NONCE_LEN: usize = 12;
+const SALT_LEN: usize = 16;
+
+pub struct SecurityUtil {
+    base64_engine: engine::GeneralPurpose,
+}
+
+impl SecurityUtil {
+    pub fn init() -> Self {
+        Self {
+            base64_engine: engine::GeneralPurpose::new(&alphabet::STANDARD, general_purpose::PAD),
+        }
+    }
+
+    pub fn base64_encode(self, bytes: &[u8]) -> anyhow::Result<String> {
+        Ok(self.base64_engine.encode(bytes))
+    }
+
+    pub fn base64_decode(self, text: &str) -> anyhow::Result<Vec<u8>> {
+        Ok(self.base64_engine.decode(&text)?)
+    }
+
+    pub fn load_master_key(self) -> anyhow::Result<Vec<u8>> {
+        let home_path = home_dir();
+        if home_path.is_none() {
+            return Err(anyhow!("Unable to find home path"))
+        }
+        let key_path = home_path.unwrap().join(".pgmoneta-mcp/master.key");
+        let key = fs::read_to_string(key_path)?;
+        Ok(self.base64_decode(&key)?)
+    }
+
+    pub fn encrypt_to_base64_string(self, plain_text: &[u8], master_key: &[u8]) -> anyhow::Result<String> {
+        let (cipher_text, nonce_bytes, salt) = Self::encrypt_text(plain_text, master_key)?;
+        let mut bytes = Vec::new();
+        // nonce + salt + cipher text
+        bytes.extend_from_slice(&nonce_bytes);
+        bytes.extend_from_slice(&salt);
+        bytes.extend(cipher_text.iter());
+        self.base64_encode(bytes.as_slice())
+    }
+
+    pub fn decrypt_from_base64_string(self, cipher_text: &str, master_key: &[u8]) -> anyhow::Result<Vec<u8>> {
+        let cipher_text_bytes = self.base64_decode(cipher_text)?;
+        if cipher_text_bytes.len() < SALT_LEN + NONCE_LEN {
+            return Err(anyhow!("Not enough bytes to decrypt the text"))
+        }
+        let nonce: &[u8] = &cipher_text_bytes[..NONCE_LEN];
+        let salt: &[u8] = &cipher_text_bytes[NONCE_LEN..SALT_LEN];
+        Self::decrypt_text(&cipher_text_bytes[..(NONCE_LEN + SALT_LEN)], master_key, nonce, salt)
+    }
+}
+
+impl SecurityUtil {
+    fn derive_key(master_key: &[u8], salt: &[u8]) -> [u8; 32] {
+        let params = Params::recommended();
+        let mut derived_key = [0u8; 32];
+        scrypt(master_key, salt, &params, &mut derived_key).expect("scrypt should not fail");
+        derived_key
+    }
+
+    pub fn encrypt_text(plaintext: &[u8], master_key: &[u8]) -> anyhow::Result<(Vec<u8>, [u8; NONCE_LEN], [u8; SALT_LEN])> {
+        // derive the key
+        let mut salt = [0u8; SALT_LEN];
+        let mut nonce_bytes = [0u8; NONCE_LEN];
+        rand::rngs::OsRng.try_fill_bytes(&mut salt)?;
+        rand::rngs::OsRng.try_fill_bytes(&mut nonce_bytes)?;
+        let mut derived_key_bytes = Self::derive_key(master_key, &salt);
+        let derived_key = aes_gcm::Key::<Aes256Gcm>::from_slice(&derived_key_bytes);
+
+        let cipher = Aes256Gcm::new(derived_key);
+        let nonce = Nonce::from_slice(&nonce_bytes);
+        let ciphertext = cipher.encrypt(nonce, plaintext)
+            .map_err(|e| { anyhow!("AES encryption failed {:?}", e) });
+
+        derived_key_bytes.zeroize();
+
+        Ok((ciphertext?, nonce_bytes, salt))
+    }
+
+    pub fn decrypt_text(ciphertext: &[u8], master_key: &[u8], nonce_bytes: &[u8], salt: &[u8]) -> anyhow::Result<Vec<u8>> {
+        let mut derived_key_bytes = Self::derive_key(master_key, &salt);
+        let derived_key = aes_gcm::Key::<Aes256Gcm>::from_slice(&derived_key_bytes);
+        let cipher = Aes256Gcm::new(derived_key);
+
+        let nonce = Nonce::from_slice(nonce_bytes);
+        let plaintext = cipher.decrypt(nonce, ciphertext)
+            .map_err(|e| { anyhow!("AES decryption failed {:?}", e) });
+        derived_key_bytes.zeroize();
+
+        Ok(plaintext?)
+    }
+}

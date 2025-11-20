@@ -24,17 +24,13 @@
 // TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+use std::collections::HashMap;
+
 #[derive(Clone, Debug)]
 pub struct Configuration {
     pub pgmoneta: Pgmoneta,
     pub port: i32,
-    pub admins: Vec<User>
-}
-
-#[derive(Clone, Debug)]
-pub struct User {
-    pub user_name: String,
-    pub password: String,
+    pub admins: HashMap<String, String> //username -> password
 }
 
 #[derive(Clone, Debug)]
