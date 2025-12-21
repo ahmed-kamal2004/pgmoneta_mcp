@@ -137,7 +137,7 @@ impl SecurityUtil {
     /// Connect to pgmoneta server using SCRAM-SHA-256 authentication.
     pub async fn connect_to_server(host: &str, port: i32, username: &str, password: &str) -> anyhow::Result<TcpStream> {
         let scram = ScramClient::new(username, password, None);
-        let address = format!("{}:{}!", host, port);
+        let address = format!("{}:{}", host, port);
         let mut stream = TcpStream::connect(address).await?;
         let (scram, client_first) = scram.client_first();
         stream.write_all(client_first.as_bytes()).await?;
