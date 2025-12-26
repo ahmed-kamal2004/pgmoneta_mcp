@@ -28,10 +28,16 @@ pub struct InfoRequest {
 
 impl PgmonetaHandler {
     pub(super) async fn _get_backup_info(&self, request: InfoRequest) -> Result<CallToolResult, McpError> {
-        let result = PgmonetaClient::request_backup_info(&request.username, &request.server, &request.backup_id).await.map_err(|e| {
-            McpError::internal_error(format!("Failed to retrieve backup information: {:?}", e), None)
-        })?;
-        Self::_check_result(&result)?;
-        Ok(CallToolResult::success(vec![Content::text(result)]))
+        let result = PgmonetaClient::request_backup_info(&request.username, &request.server, &request.backup_id).await.map_err(
+            |e| McpError::internal_error(format!("Failed to retrieve backup information: {:?}", e), None)
+        )?;
+        let result = Self::_parse_and_check_result(&result)?;
+        let trans_res = Self::_translate_result(&result).map_err(
+            |e| McpError::internal_error(format!("Failed to translate some of the result fields: {:?}", e), None)
+        )?;
+        let trans_res_str = serde_json::to_string(&trans_res).map_err(
+            |e| McpError::internal_error(format!("Failed to serialize result: {:?}", e), None)
+        )?;
+        Ok(CallToolResult::success(vec![Content::text(trans_res_str)]))
     }
 }
