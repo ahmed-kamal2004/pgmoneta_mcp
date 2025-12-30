@@ -26,10 +26,10 @@ const BIND_ADDRESS: &str = "0.0.0.0";
 #[derive(Debug, Parser)]
 #[command(
     name = "pgmoneta-mcp",
-    about = "Start an MCP server for Pgmoneta, backup/restore tool for Postgres"
+    about = "A Model Context Protocol (MCP) server for pgmoneta, backup/restore tool for PostgreSQL"
 )]
 struct Args {
-    /// Path to pgmoneta users configuration file
+    /// Path to pgmoneta MCP users configuration file
     #[arg(short, long)]
     users: String,
 
