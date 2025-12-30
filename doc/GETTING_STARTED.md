@@ -33,7 +33,7 @@ This will prompt you to input your master key.
 Add the same user and password you added to pgmoneta server to pgmoneta MCP server, creating or updating
 your user configuration toml file.
 ```
-pgmoneta-mcp-admin user -U <your_user_id> -f <your_mcp_user_conf.conf> add -p <your_password>
+pgmoneta-mcp-admin user -u <your_user_id> -f <your_mcp_user_conf.conf> add -p <your_password>
 ```
 
 ## Configure pgmoneta MCP server
@@ -54,27 +54,31 @@ is what you'll run your MCP server at.
 
 First check again if your pgmoneta server is up and running. Then to start the server, run
 ```
-pgmoneta-mcp-server -U pgmoneta_mcp_users.conf -c pgmoneta_mcp.conf
-```
+pgmoneta-mcp-server -u pgmoneta_mcp_users.conf -c pgmoneta_mcp.conf
+``**
 
 ## Add MCP server to VS Code
 
 We will use VS code as an example. You can of course choose other MCP clients.
 
-### Prerequisite
+**Prerequisite**
+
 You need to have GitHub Copilot extension installed in VS code.
 
-### Add your server
+**Add your server**
+
 Open the Command Palette in VS Code, type "MCP: Add Server" to configure your server in VS code.
 
 Note that if your server is running remotely, you may need to configure firewall and/or network inbound rules
 to open the corresponding port, or alternatively, use SSH tunneling.
 
-### Start your server
+**Start your server**
+
 At the extension tab, you will see the installed MCP servers. Choose the pgmoneta MCP server you just added,
 click the gear icon, choose "Start Server". This will let VS code to try connecting with your MCP server and
 discover available tool.
 
-### Use your MCP server
+**Use your MCP server**
+
 Open a chat (shortcut: Ctrl + Alt + I). Try asking your model to ask the server to say hello, or query
 your latest backup info!
