@@ -29,13 +29,13 @@ const BIND_ADDRESS: &str = "0.0.0.0";
     about = "A Model Context Protocol (MCP) server for pgmoneta, backup/restore tool for PostgreSQL"
 )]
 struct Args {
-    /// Path to pgmoneta MCP users configuration file
-    #[arg(short = 'u', long)]
-    users: String,
-
     /// Path to pgmoneta MCP configuration file
     #[arg(short, long)]
     conf: String,
+
+    /// Path to pgmoneta MCP users configuration file
+    #[arg(short = 'u', long)]
+    users: String,
 }
 
 #[tokio::main]
