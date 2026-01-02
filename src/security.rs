@@ -155,7 +155,7 @@ impl SecurityUtil {
     const MAX_PG_MESSAGE_LEN: usize = 64 * 1024;
 
     async fn read_message(stream: &mut TcpStream) -> anyhow::Result<Vec<u8>> {
-        let msg_type= stream.read_u8().await?;
+        let msg_type = stream.read_u8().await?;
 
         let len = stream.read_u32().await? as usize;
 
