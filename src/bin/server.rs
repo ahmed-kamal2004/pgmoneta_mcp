@@ -73,7 +73,6 @@ async fn main() -> anyhow::Result<()> {
         .expect("CONFIG already initialized");
 
     tracing::info!("Starting MCP server at {address}");
-    println!("Starting pgmoneta MCP server at {address}");
 
     let _ = axum::serve(tcp_listener, router)
         .with_graceful_shutdown(async { tokio::signal::ctrl_c().await.unwrap() })
