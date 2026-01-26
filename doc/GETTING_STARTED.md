@@ -38,7 +38,7 @@ Add the same user and password you added to pgmoneta server to pgmoneta MCP serv
 your user configuration file.
 
 ```
-pgmoneta-mcp-admin user -U <your_user_id> -P <your_password> -f <your_mcp_user_conf.conf> add
+pgmoneta-mcp-admin user -U <your_user_id> -f <your_mcp_user_conf.conf> add -P <your_password> 
 ```
 
 ## Configure pgmoneta MCP server
