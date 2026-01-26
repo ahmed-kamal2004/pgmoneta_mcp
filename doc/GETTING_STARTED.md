@@ -48,6 +48,9 @@ Create a configuration file `pgmoneta_mcp.conf`. An example is as follows
 ```
 [pgmoneta_mcp]
 port = 8000
+log_type = file
+log_level = trace
+log_path = /tmp/pgmoneta_mcp.log
 
 [pgmoneta]
 host = "localhost"
