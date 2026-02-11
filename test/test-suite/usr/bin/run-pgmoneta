@@ -1,0 +1,48 @@
+#!/bin/bash
+## Copyright (C) 2026 The pgmoneta community
+##
+## This program is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+## GNU General Public License for more details.
+##
+## You should have received a copy of the GNU General Public License
+## along with this program. If not, see <https://www.gnu.org/licenses/>.
+echo "Setting up pgmoneta..."
+
+required_vars=("PG_PRIMARY_NAME" "PG_PRIMARY_PORT" "PG_REPL_USER_NAME" "PG_REPL_USER_PASSWORD")
+for var in "${required_vars[@]}"; do
+    if [ -z "${!var}" ]; then
+        echo "ERROR: $var is not set!"
+        exit 1
+    fi
+done
+
+if [ ! -f /conf-pgmoneta/pgmoneta.conf ]; then
+    echo "ERROR: /conf-pgmoneta/pgmoneta.conf template not found!"
+    exit 1
+fi 
+cp /conf-pgmoneta/pgmoneta.conf /tmp/pgmoneta.conf.tmp
+sed -i "s/PG_PRIMARY_NAME/$PG_PRIMARY_NAME/g" /tmp/pgmoneta.conf.tmp
+sed -i "s/PG_PRIMARY_PORT/$PG_PRIMARY_PORT/g" /tmp/pgmoneta.conf.tmp
+sed -i "s/PG_REPL_USER_NAME/$PG_REPL_USER_NAME/g" /tmp/pgmoneta.conf.tmp
+sed -i "s/PG_REPL_USER_PASSWORD/$PG_REPL_USER_PASSWORD/g" /tmp/pgmoneta.conf.tmp
+
+mv /tmp/pgmoneta.conf.tmp /pgmoneta/pgmoneta.conf
+
+echo "Initializing pgmoneta..."
+su - pgmoneta -c "pgmoneta-admin -f /pgmoneta/pgmoneta_admins.conf -U ${PG_REPL_USER_NAME} -P ${PG_REPL_USER_PASSWORD} user add"
+su - pgmoneta -c "pgmoneta-admin -f /pgmoneta/pgmoneta_users.conf -U ${PG_REPL_USER_NAME} -P ${PG_REPL_USER_PASSWORD} user add"
+
+echo "PATH=/usr/pgsql-18/bin:\$PATH" > /home/pgmoneta/.bashrc
+echo "export PATH" >> /home/pgmoneta/.bashrc
+
+echo "Setup complete!"
+
+echo "Starting pgmoneta..."
+exec su - pgmoneta -c "pgmoneta -c /pgmoneta/pgmoneta.conf -A /pgmoneta/pgmoneta_admins.conf -u /pgmoneta/pgmoneta_users.conf \"\$@\""

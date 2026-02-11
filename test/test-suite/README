@@ -1,0 +1,40 @@
+# PostgreSQL and Pgmoneta image for testing purposes.
+
+This project contains the PostgreSQL and Pgmoneta composed image.
+
+## Getting Started
+
+```bash
+# Create the image
+make build
+
+# Run, and register the container under pgmoneta-container
+podman run -p 5002:5002 -p 5001:5001 -p 9100:9100 -p 5432:5432 --name pgmoneta-container -d -e PG_DATABASE=mydb -e PG_USER_NAME=myuser -e PG_USER_PASSWORD=mypass -e PG_NETWORK_MASK=all -e PG_PRIMARY_NAME=localhost -e PG_PRIMARY_PORT=5432 -e PG_REPL_USER_NAME=backup_user -e PG_REPL_USER_PASSWORD=backup_pass --replace localhost/pgmoneta_mcp-test-suite
+
+# Connect to pgmoneta
+pgmoneta-cli -h localhost -p 5002 -U backup_user -P backup_pass list-backup primary
+
+# Shell to pgmoneta-container
+podman exec -it pgmoneta-container /bin/bash 
+```
+
+## Configuration
+
+| **Property**       | **Default** | **Unit** | **Required** | **Description** |
+|---------------------|-------------|----------|--------------|-----------------|
+| **PG_PRIMARY_NAME** |             |          | Yes          | The name of the PostgreSQL primary server |
+| **PG_PRIMARY_PORT** | 5432        |          | Yes          | The port of the PostgreSQL primary server |
+| **PG_REPL_USER_NAME**  |             |          | Yes          | The backup user name |
+| **PG_REPL_USER_PASSWORD** |         |          | Yes          | The password for the backup user |
+| **PG_DATABASE**     |             |          | Yes          | The name of the database to create |
+| **PG_USER_NAME**    |             |          | Yes          | The name of the user to create |
+| **PG_USER_PASSWORD** |            |          | Yes          | The password for the user to create |
+| **PG_NETWORK_MASK** |             |          | Yes          | The network mask for allowing connections to PostgreSQL |
+
+## Volumes
+
+| **Name**     | **Description** |
+|--------------|-----------------|
+| `/pgmoneta`  | pgmoneta backup and configuration directory |
+| `/pgdata`    | PostgreSQL data directory |
+| `/pgwal`     | PostgreSQL WAL directory |

@@ -1,0 +1,71 @@
+#!/bin/bash
+## Copyright (C) 2026 The pgmoneta community
+##
+## This program is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+## GNU General Public License for more details.
+##
+## You should have received a copy of the GNU General Public License
+## along with this program. If not, see <https://www.gnu.org/licenses/>.
+export PG_MAX_CONNECTIONS=${PG_MAX_CONNECTIONS:-100}
+export PG_SHARED_BUFFERS=${PG_SHARED_BUFFERS:-256MB}
+export PG_WORK_MEM=${PG_WORK_MEM:-64kB}
+export PG_MAX_PARALLEL_WORKERS=${PG_MAX_PARALLEL_WORKERS:-8}
+export PG_EFFECTIVE_CACHE_SIZE=${PG_EFFECTIVE_CACHE_SIZE:-1GB}
+export PG_MAX_WAL_SIZE=${PG_MAX_WAL_SIZE:-2GB}
+export PG_PASSWORD_ENCRYPTION=${PG_PASSWORD_ENCRYPTION:-scram-sha-256}
+export PG_LOG_LEVEL=${PG_LOG_LEVEL:-warning}
+
+export PG_DATABASE=${PG_DATABASE}
+export PG_DATABASE_ENCODING=${PG_DATABASE_ENCODING:-UTF8}
+export PG_USER_NAME=${PG_USER_NAME}
+export PG_USER_PASSWORD=${PG_USER_PASSWORD}
+export PG_NETWORK_MASK=${PG_NETWORK_MASK}
+export PG_REPL_USER_NAME=${PG_REPL_USER_NAME}
+export PG_REPL_USER_PASSWORD=${PG_REPL_USER_PASSWORD}
+
+if [ -z "${PG_DATABASE}" ] ||
+    [ -z "${PG_USER_NAME}" ] || [ -z "${PG_USER_PASSWORD}" ] || [ -z "${PG_REPL_USER_NAME}" ] || [ -z "${PG_REPL_USER_PASSWORD}" ] ||
+    [ -z "${PG_NETWORK_MASK}" ]; then
+    echo "PG_DATABASE, PG_USER_NAME, PG_USER_PASSWORD, PG_REPL_USER_NAME, PG_REPL_USER_PASSWORD and PG_NETWORK_MASK needs to be defined."
+    exit 1
+fi
+
+su - postgres -c "/usr/pgsql-18/bin/initdb -k -X /pgwal/ -D /pgdata/ --locale-provider=icu --icu-locale=en-US"
+
+sed -i "s|PG_MAX_CONNECTIONS|$PG_MAX_CONNECTIONS|g" /conf-postgres/postgresql.conf
+sed -i "s|PG_SHARED_BUFFERS|$PG_SHARED_BUFFERS|g" /conf-postgres/postgresql.conf
+sed -i "s|PG_WORK_MEM|$PG_WORK_MEM|g" /conf-postgres/postgresql.conf
+sed -i "s|PG_MAX_PARALLEL_WORKERS|$PG_MAX_PARALLEL_WORKERS|g" /conf-postgres/postgresql.conf
+sed -i "s|PG_EFFECTIVE_CACHE_SIZE|$PG_EFFECTIVE_CACHE_SIZE|g" /conf-postgres/postgresql.conf
+sed -i "s|PG_MAX_WAL_SIZE|$PG_MAX_WAL_SIZE|g" /conf-postgres/postgresql.conf
+sed -i "s|PG_PASSWORD_ENCRYPTION|$PG_PASSWORD_ENCRYPTION|g" /conf-postgres/postgresql.conf
+sed -i "s|PG_LOG_LEVEL|$PG_LOG_LEVEL|g" /conf-postgres/postgresql.conf
+
+sed -i "s|PG_DATABASE|$PG_DATABASE|g" /conf-postgres/pg_hba.conf
+sed -i "s|PG_USER_NAME|$PG_USER_NAME|g" /conf-postgres/pg_hba.conf
+sed -i "s|PG_NETWORK_MASK|$PG_NETWORK_MASK|g" /conf-postgres/pg_hba.conf
+sed -i "s|PG_PASSWORD_ENCRYPTION|$PG_PASSWORD_ENCRYPTION|g" /conf-postgres/pg_hba.conf
+sed -i "s|PG_REPL_USER_NAME|$PG_REPL_USER_NAME|g" /conf-postgres/pg_hba.conf
+
+cp /conf-postgres/postgresql.conf /pgdata/
+cp /conf-postgres/pg_hba.conf /pgdata/
+
+sed -i "s|PG_DATABASE_ENCODING|$PG_DATABASE_ENCODING|g" /conf-postgres/setup.sql
+sed -i "s|PG_DATABASE|$PG_DATABASE|g" /conf-postgres/setup.sql
+sed -i "s|PG_USER_NAME|$PG_USER_NAME|g" /conf-postgres/setup.sql
+sed -i "s|PG_USER_PASSWORD|$PG_USER_PASSWORD|g" /conf-postgres/setup.sql
+sed -i "s|PG_REPL_USER_NAME|$PG_REPL_USER_NAME|g" /conf-postgres/setup.sql
+sed -i "s|PG_REPL_USER_PASSWORD|$PG_REPL_USER_PASSWORD|g" /conf-postgres/setup.sql
+
+su - postgres -c "/usr/pgsql-18/bin/pg_ctl -D /pgdata/ -w start"
+su - postgres -c "/usr/pgsql-18/bin/psql -h /tmp -q -f /conf-postgres/setup.sql postgres"
+su - postgres -c "/usr/pgsql-18/bin/pg_ctl -D /pgdata/ stop"
+
+exec su - postgres -c "/usr/pgsql-18/bin/postgres -D /pgdata/ \"\$@\""

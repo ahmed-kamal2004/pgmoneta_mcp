@@ -1,0 +1,53 @@
+#!/bin/bash
+## Copyright (C) 2026 The pgmoneta community
+##
+## This program is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+##
+## This program is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+## GNU General Public License for more details.
+##
+## You should have received a copy of the GNU General Public License
+## along with this program. If not, see <https://www.gnu.org/licenses/>.
+set -euo pipefail
+
+stop_children() {
+	echo "Stopping children..."
+	[ -n "${PGMONETA_PID:-}" ] && kill -TERM "${PGMONETA_PID}" 2>/dev/null || true
+	[ -n "${POSTGRES_PID:-}" ] && kill -TERM "${POSTGRES_PID}" 2>/dev/null || true
+	wait
+}
+
+trap 'stop_children; exit 0' SIGTERM SIGINT
+
+echo "Starting PostgreSQL..."
+/usr/bin/run-postgresql &
+POSTGRES_PID=$!
+
+sleep 5
+
+echo "Starting pgmoneta..."
+/usr/bin/run-pgmoneta &
+PGMONETA_PID=$!
+
+while true; do
+	if ! kill -0 "$POSTGRES_PID" 2>/dev/null; then
+		echo "PostgreSQL exited, stopping pgmoneta..."
+		stop_children
+		wait "$POSTGRES_PID" || true
+		exit 1
+	fi
+
+	if ! kill -0 "$PGMONETA_PID" 2>/dev/null; then
+		echo "pgmoneta exited, stopping PostgreSQL..."
+		stop_children
+		wait "$PGMONETA_PID" || true
+		exit 1
+	fi
+
+	sleep 1
+done
