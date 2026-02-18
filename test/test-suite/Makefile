@@ -26,6 +26,7 @@ CONTAINER_ENGINE := $(shell \
 all:
 	make clean
 	make build
+	make run-default
 build:
 	$(CONTAINER_ENGINE) build --no-cache -t $(IMAGE_NAME) .
 
@@ -33,3 +34,6 @@ clean:
 	$(CONTAINER_ENGINE) stop $(CONTAINER_NAME) 2>/dev/null || true
 	$(CONTAINER_ENGINE) rm -f $(CONTAINER_NAME) 2>/dev/null || true
 	$(CONTAINER_ENGINE) rmi -f $(IMAGE_NAME) 2>/dev/null || true
+run-default:
+	$(CONTAINER_ENGINE) run -p 5002:5002 -p 5001:5001 -p 9100:9100 -p 5432:5432 --name $(CONTAINER_NAME) -d -e PG_DATABASE=mydb -e PG_USER_NAME=myuser -e PG_USER_PASSWORD=mypass -e PG_NETWORK_MASK=all -e PG_PRIMARY_NAME=localhost -e PG_PRIMARY_PORT=5432 -e PG_REPL_USER_NAME=backup_user -e PG_REPL_USER_PASSWORD=backup_pass --replace localhost/$(IMAGE_NAME)
+

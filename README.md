@@ -2,7 +2,7 @@
 
 **pgmoneta MCP** is the official pgmoneta MCP server built for [pgmoneta](https://pgmoneta.github.io/), a backup / restore solution for [PostgreSQL](https://www.postgresql.org).
 
-For now, this server allows you to query the backup info using natural langue with your MCP client.
+For now, this server allows you to query the backup info using natural language with your MCP client.
 
 ## Overview
 
@@ -14,6 +14,8 @@ To build the project, run `cargo build` inside project's root directory. Alterna
 and install the project.
 
 Two binaries `pgmoneta-mcp-server` and `pgmoneta-mcp-admin` will be built.
+
+Check the `doc` directory for more details.
 
 ## License
 

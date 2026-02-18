@@ -16,8 +16,8 @@ FROM docker.io/rockylinux/rockylinux:10
 
 LABEL maintainer="Jesper Pedersen <jesperpedersen.db@gmail.com>"
 
-LABEL summary="PostgreSQL and Pgmoneta Composed Image" \
-      description="PostgreSQL and Pgmoneta Composed Image"
+LABEL summary="PostgreSQL and pgmoneta Composed Image" \
+      description="PostgreSQL and pgmoneta Composed Image"
 
 ENV PGVERSION="18"
 ENV PGROOT="/usr/pgsql-${PGVERSION}"

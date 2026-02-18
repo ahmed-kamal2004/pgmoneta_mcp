@@ -1,6 +1,6 @@
-# PostgreSQL and Pgmoneta image for testing purposes.
+# PostgreSQL and pgmoneta image for testing purposes.
 
-This project contains the PostgreSQL and Pgmoneta composed image.
+This project contains the PostgreSQL and pgmoneta composed image.
 
 ## Getting Started
 
