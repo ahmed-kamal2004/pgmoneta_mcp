@@ -39,7 +39,7 @@ jobs:
       with:
         command: check
 
-  test:
+  unit-test:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -53,6 +53,7 @@ jobs:
       uses: actions-rs/cargo@v1
       with:
         command: test
+        args: --lib 
 
   lint:
     runs-on: ubuntu-latest
@@ -70,3 +71,34 @@ jobs:
       with:
         command: clippy
         args: -- -D warnings # Treat clippy warnings as errors
+
+  full-test:
+    runs-on: ubuntu-latest
+    container:
+      image: docker.io/rockylinux/rockylinux:10
+      options: --privileged -v /var/run/docker.sock:/var/run/docker.sock
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install dependencies
+      run: |
+        dnf install -y 'dnf-command(config-manager)'
+        rpm -Uvh https://dl.fedoraproject.org/pub/epel/epel-release-latest-10.noarch.rpm
+        rpm -Uvh https://download.postgresql.org/pub/repos/yum/reporpms/EL-10-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+        dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+        dnf update -y
+        dnf install -y cargo rustc make netcat postgresql-contrib git sudo docker-ce docker-ce-cli
+        dnf install -y pgmoneta
+    - name: Create test user
+      run: |
+        useradd -m testuser
+        DOCKER_GID=$(stat -c '%g' /var/run/docker.sock)
+        groupadd -g "$DOCKER_GID" docker || groupmod -g "$DOCKER_GID" docker || true
+        usermod -aG docker testuser
+        echo 'Defaults:testuser !requiretty' > /etc/sudoers.d/testuser
+        echo 'testuser ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers.d/testuser
+        chmod 440 /etc/sudoers.d/testuser
+        chown -R testuser:testuser "$GITHUB_WORKSPACE"
+        chmod -R u+w "$GITHUB_WORKSPACE"
+    - name: Run integration tests
+      run: |
+        runuser -u testuser -- bash -lc 'cd "$GITHUB_WORKSPACE/test" && bash check.sh'
