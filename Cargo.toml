@@ -58,3 +58,11 @@ syslog-tracing = "0.3.1"
 [target.'cfg(windows)'.dependencies]
 winlog2 = "0.3.2"
 log = "0.4"
+
+[[test]]
+name = "info_test"
+path = "tests/info_test.rs"
+
+[[test]]
+name = "list_backup_test"
+path = "tests/list_backup_test.rs"

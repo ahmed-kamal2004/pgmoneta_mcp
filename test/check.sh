@@ -17,25 +17,43 @@ set -euo pipefail
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 readonly PGMONETA_DIR="$HOME/.pgmoneta"
+readonly PGMONETA_MCP_DIR="$HOME/.pgmoneta-mcp"
 readonly MASTER_KEY_FILE="$PGMONETA_DIR/master.key"
+readonly MCP_MASTER_KEY_FILE="$PGMONETA_MCP_DIR/master.key"
 readonly TEST_SUITE_DIR_NAME="test-suite"
 readonly TEST_SUITE_DIR="$SCRIPT_DIR/$TEST_SUITE_DIR_NAME"
 readonly TEST_MASTER_KEY="$TEST_SUITE_DIR/master.key"
+MASTER_KEY_PATH=
 
+## Master key is needed by the integration tests, it needs to be existing in the 
 setup_master_key() {
-    if [[ ! -f "$MASTER_KEY_FILE" ]]; then
-        echo "Generating new master key..."
-        pgmoneta-admin -g master-key
-    else 
+    if [[ -f "$MCP_MASTER_KEY_FILE" ]]; then
+        echo "MCP master key already exists, skipping generation."
+        chmod 700 "$PGMONETA_MCP_DIR"
+        chmod 600 "$MCP_MASTER_KEY_FILE"
+        MASTER_KEY_PATH="$MCP_MASTER_KEY_FILE"
+    elif [[ -f "$MASTER_KEY_FILE" ]]; then
         echo "Master key already exists, skipping generation."
+        chmod 700 "$PGMONETA_DIR"
+        chmod 600 "$MASTER_KEY_FILE"
+        MASTER_KEY_PATH="$MASTER_KEY_FILE"
+    else
+        mkdir -p "$PGMONETA_DIR"
+        echo "Generating new master key..."
+        chmod 700 "$PGMONETA_DIR"
+        pgmoneta-admin -g master-key
+        chmod 600 "$MASTER_KEY_FILE"
+        MASTER_KEY_PATH="$MASTER_KEY_FILE"
     fi
-    chmod 700 "$PGMONETA_DIR"
-    chmod 600 "$MASTER_KEY_FILE"
 }
 
 copy_master_key() {
     echo "Copying master key to test suite directory..."
-    cat "$MASTER_KEY_FILE" > "$TEST_MASTER_KEY"
+    cat "$MASTER_KEY_PATH" > "$TEST_MASTER_KEY"
+    mkdir -p "$PGMONETA_MCP_DIR"
+    chmod 700 "$PGMONETA_MCP_DIR"
+    cat "$MASTER_KEY_PATH" > "$MCP_MASTER_KEY_FILE"
+    chmod 600 "$MCP_MASTER_KEY_FILE"
 }
 
 build_test_suite() {
@@ -92,6 +110,23 @@ start_composed_container() {
     cd "$TEST_SUITE_DIR"
     make run-default
     cd "$SCRIPT_DIR"
+    wait_for_container
+}
+
+wait_for_container() {
+    max_wait=30
+    count=0
+
+    until nc -z localhost 5002; do
+        if [ "$count" -ge "$max_wait" ]; then
+            echo "pgmoneta did not become ready within ${max_wait}s"
+            exit 1
+        fi
+
+        echo "Waiting for pgmoneta..."
+        sleep 1
+        count=$((count + 1))
+    done
 }
 
 remove_target_directory_if_exists() {
@@ -122,7 +157,9 @@ usage() {
    echo " setup          Install Dependencies e.g (Rust, Cargo and Make) required for building and running tests"
    echo " build          Set up environment (build, postgreSQL and pgmoneta composed image) without running tests"
    echo " clean          Clean up test suite environment and remove the composed image"
-   echo " test           Build image and run full test suite (clean + build + test)"
+   echo " test           Starts the composed container and run full test suite (clean + build + test)"
+   echo " integration    Starts the composed container and run only integration tests (clean + build + integration)"
+   echo " unit           Starts the composed container and run only unit tests (clean + build + unit)"
    echo "Options (run tests with optional filter; default is full suite):"
    echo " -m, --module NAME   Run all tests in module NAME"
    echo "Examples:"
@@ -130,6 +167,7 @@ usage() {
    echo "  $0 test             Run full test suite"
    echo "  $0 build            Set up environment only; then run e.g. $0 test -m security"
    echo "  $0 test -m security       Run all tests in module 'security'"
+   echo "  $0 integration -m info_test    Run integration tests in module 'info_test'"
    exit 1
 }
 
@@ -164,6 +202,16 @@ main() {
             SUBCOMMAND="test"
             shift
             ;;
+        integration)
+            [[ -n "$SUBCOMMAND" ]] && usage
+            SUBCOMMAND="integration"
+            shift
+            ;;
+        unit)
+            [[ -n "$SUBCOMMAND" ]] && usage
+            SUBCOMMAND="unit"
+            shift
+            ;;
         -h|--help)
             usage
             ;;
@@ -178,8 +226,9 @@ main() {
     esac
     done
 
-    if [[ -n "$MODULE_FILTER" ]] && [[ -n "$SUBCOMMAND" ]] && [[ "$SUBCOMMAND" != "test" ]]; then
-        echo "Error: -m/--module option can only be used with 'test' subcommand or no subcommand"
+    if [[ -n "$MODULE_FILTER" ]] && [[ -n "$SUBCOMMAND" ]] && \
+       [[ "$SUBCOMMAND" != "test" ]] && [[ "$SUBCOMMAND" != "integration" ]] && [[ "$SUBCOMMAND" != "unit" ]]; then
+        echo "Error: -m/--module option can only be used with 'test', 'integration', or 'unit' subcommands, or no subcommand"
         usage
     fi
 
@@ -203,9 +252,26 @@ main() {
     if [[ "$SUBCOMMAND" == "test" ]]; then
         start_composed_container
         if [[ -n "$MODULE_FILTER" ]]; then
-            cargo test -- --test-threads=1 --nocapture -- $MODULE_FILTER
+            cargo test --all-features -- --test-threads=1 --nocapture -- $MODULE_FILTER
         else 
-            cargo test -- --test-threads=1 --nocapture
+            cargo test --all-features -- --test-threads=1 --nocapture
+        fi
+        exit 0
+    fi
+    if [[ "$SUBCOMMAND" == "integration" ]]; then
+        start_composed_container
+        if [[ -n "$MODULE_FILTER" ]]; then
+            cargo test --test "*" -- --test-threads=1 --nocapture -- $MODULE_FILTER
+        else 
+            cargo test --test "*" -- --test-threads=1 --nocapture
+        fi
+        exit 0
+    fi
+    if [[ "$SUBCOMMAND" == "unit" ]]; then
+        if [[ -n "$MODULE_FILTER" ]]; then
+            cargo test --lib -- --test-threads=1 --nocapture -- $MODULE_FILTER
+        else 
+            cargo test --lib -- --test-threads=1 --nocapture
         fi
         exit 0
     fi

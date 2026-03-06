@@ -15,6 +15,15 @@ The script then runs pgmoneta_mcp tests in your local environment. The tests are
 ## Build only (no tests) 
 Run `<PATH_TO_PGMONETA>/test/check.sh build` to prepare the test environment (image, master key generation) without running tests. This always does a full build.
 
+## Fast Iteration of testing
+Run `<PATH_TO_PGMONETA_MCP>/test/check.sh test` to run the full test suite without rebuilding the composed image
+
+## Unit tests
+To run unit tests only, simply run `<PATH_TO_PGMONETA_MCP>/test/check.sh unit`
+
+## Integration tests
+To run integration tests only, simply run `<PATH_TO_PGMONETA_MCP>/test/check.sh integration`
+
 ## Single test or module
 Run `<PATH_TO_PGMONETA>/test/check.sh test -m <test_name>`. The script assumes the environment is up, so you need to run the full suite first. For quick iteration, run `<PATH_TO_PGMONETA>/test/check.sh build` once, then `<PATH_TO_PGMONETA>/test/check.sh test -m <module_name>` or `<PATH_TO_PGMONETA>/test/check.sh test` repeatedly.
 

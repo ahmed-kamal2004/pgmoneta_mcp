@@ -16,9 +16,17 @@ IMAGE_NAME = pgmoneta_mcp-test-suite
 CONTAINER_NAME = pgmoneta-container
 CONTAINER_ENGINE := $(shell \
 	if command -v podman >/dev/null 2>&1; then echo podman; \
-	elif command -v docker >/dev/null 2>&1; then echo "sudo docker"; \
+	elif command -v docker >/dev/null 2>&1; then echo docker; \
 	else echo "Neither Docker nor Podman is installed" >&2; exit 1; \
 	fi)
+
+ifeq ($(CONTAINER_ENGINE),docker)
+IMAGE_REF = docker.io/library/$(IMAGE_NAME)
+RUN_REPLACE_FLAG =
+else
+IMAGE_REF = localhost/$(IMAGE_NAME)
+RUN_REPLACE_FLAG = --replace
+endif
 
 .PHONY: all build clean
 
@@ -28,12 +36,13 @@ all:
 	make build
 	make run-default
 build:
-	$(CONTAINER_ENGINE) build --no-cache -t $(IMAGE_NAME) .
+	$(CONTAINER_ENGINE) build --no-cache -t $(IMAGE_REF) .
 
 clean:
 	$(CONTAINER_ENGINE) stop $(CONTAINER_NAME) 2>/dev/null || true
 	$(CONTAINER_ENGINE) rm -f $(CONTAINER_NAME) 2>/dev/null || true
+	$(CONTAINER_ENGINE) rmi -f $(IMAGE_REF) 2>/dev/null || true
 	$(CONTAINER_ENGINE) rmi -f $(IMAGE_NAME) 2>/dev/null || true
 run-default:
-	$(CONTAINER_ENGINE) run -p 5002:5002 -p 5001:5001 -p 9100:9100 -p 5432:5432 --name $(CONTAINER_NAME) -d -e PG_DATABASE=mydb -e PG_USER_NAME=myuser -e PG_USER_PASSWORD=mypass -e PG_NETWORK_MASK=all -e PG_PRIMARY_NAME=localhost -e PG_PRIMARY_PORT=5432 -e PG_REPL_USER_NAME=backup_user -e PG_REPL_USER_PASSWORD=backup_pass --replace localhost/$(IMAGE_NAME)
+	$(CONTAINER_ENGINE) run -p 5002:5002 -p 5001:5001 -p 9100:9100 -p 5432:5432 --name $(CONTAINER_NAME) -d -e PG_DATABASE=mydb -e PG_USER_NAME=myuser -e PG_USER_PASSWORD=mypass -e PG_NETWORK_MASK=all -e PG_PRIMARY_NAME=localhost -e PG_PRIMARY_PORT=5432 -e PG_REPL_USER_NAME=backup_user -e PG_REPL_USER_PASSWORD=backup_pass $(RUN_REPLACE_FLAG) $(IMAGE_REF)
 

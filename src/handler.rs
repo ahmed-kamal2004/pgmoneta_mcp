@@ -13,8 +13,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-mod hello;
-mod info;
+pub mod hello;
+pub mod info;
 
 use super::constant::*;
 use super::constant::{Command, Compression, Encryption};
