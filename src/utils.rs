@@ -13,9 +13,20 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+/// Provides general-purpose helper functions for the application.
 pub struct Utility;
 
 impl Utility {
+    /// Formats a raw byte count into a human-readable file size string.
+    ///
+    /// Automatically scales the output to the most appropriate unit (B, KB, MB, GB, or TB)
+    /// and formats the value to two decimal places.
+    ///
+    /// # Arguments
+    /// * `size` - The file size in raw bytes (`u64`).
+    ///
+    /// # Returns
+    /// A formatted string representing the size (e.g., "1.50 MB").
     pub fn format_file_size(size: u64) -> String {
         const KB: u64 = 1024;
         const MB: u64 = KB * 1024;

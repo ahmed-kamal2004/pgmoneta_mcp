@@ -13,6 +13,19 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+//! # pgmoneta-mcp
+//!
+//! A Model Context Protocol (MCP) server for [pgmoneta](https://pgmoneta.github.io/),
+//! providing AI assistants with the capability to interact with PostgreSQL backups.
+//!
+//! This library provides the core components for the MCP server:
+//! * **`configuration`**: Parses and stores application and user settings.
+//! * **`constant`**: Defines standard codes, commands, and formatting rules.
+//! * **`client`**: Manages low-level TCP communication with the pgmoneta server.
+//! * **`handler`**: Implements the MCP protocol and routes tool calls.
+//! * **`security`**: Handles master key management, AES encryption, and SCRAM authentication.
+//! * **`utils`**: Provides shared helper functions.
+
 pub mod configuration;
 pub mod constant;
 pub mod handler;

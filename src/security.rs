@@ -37,25 +37,38 @@ const SALT_LEN: usize = 16;
 const PBKDF2_ITERATIONS: u32 = 600_000;
 const MAX_CIPHERTEXT_B64_LEN: usize = 1024 * 1024;
 
+/// Handles cryptographic operations and secure communication.
+///
+/// This utility manages Base64 encoding/decoding, AES-256-GCM encryption/decryption
+/// of stored credentials, master key lifecycle management, and SCRAM-SHA-256
+/// authentication over the PostgreSQL wire protocol.
 pub struct SecurityUtil {
     base64_engine: engine::GeneralPurpose,
 }
 
 impl SecurityUtil {
+    /// Creates a new `SecurityUtil` with a standard Base64 engine.
     pub fn new() -> Self {
         Self {
             base64_engine: engine::GeneralPurpose::new(&alphabet::STANDARD, general_purpose::PAD),
         }
     }
 
+    /// Encodes a byte slice into a Base64 string.
     pub fn base64_encode(&self, bytes: &[u8]) -> anyhow::Result<String> {
         Ok(self.base64_engine.encode(bytes))
     }
 
+    /// Decodes a Base64 string back into a byte vector.
     pub fn base64_decode(&self, text: &str) -> anyhow::Result<Vec<u8>> {
         Ok(self.base64_engine.decode(text)?)
     }
 
+    /// Loads the master key from the user's home directory (`~/.pgmoneta-mcp/master.key`).
+    ///
+    /// On Unix systems, this also ensures the key file has strict `0600` permissions.
+    /// The returned key is wrapped in a `Zeroizing` container to ensure it is wiped
+    /// from memory when dropped.
     pub fn load_master_key(&self) -> anyhow::Result<Zeroizing<Vec<u8>>> {
         let home_path = home_dir().ok_or_else(|| anyhow!("Unable to find home path"))?;
         let key_path = home_path.join(MASTER_KEY_PATH);
@@ -73,6 +86,9 @@ impl SecurityUtil {
         Ok(Zeroizing::new(self.base64_decode(key.trim())?))
     }
 
+    /// Base64 encodes and writes a new master key to the user's home directory.
+    ///
+    /// On Unix systems, this ensures the file is created with secure `0600` permissions.
     pub fn write_master_key(&self, key: &str) -> anyhow::Result<()> {
         let home_path = home_dir().ok_or_else(|| anyhow!("Unable to find home path"))?;
         let key_path = home_path.join(MASTER_KEY_PATH);
@@ -104,6 +120,7 @@ impl SecurityUtil {
         }
     }
 
+    /// Encrypts plaintext using AES-256-GCM and encodes the result (including nonce and salt) to Base64.
     pub fn encrypt_to_base64_string(
         &self,
         plain_text: &[u8],
@@ -118,6 +135,7 @@ impl SecurityUtil {
         self.base64_encode(bytes.as_slice())
     }
 
+    /// Decodes a Base64 string and decrypts the underlying AES-256-GCM ciphertext.
     pub fn decrypt_from_base64_string(
         &self,
         cipher_text: &str,
@@ -157,6 +175,10 @@ impl SecurityUtil {
 
     const MAX_PG_MESSAGE_LEN: usize = 64 * 1024;
 
+    /// Reads a raw message frame from the PostgreSQL wire protocol stream.
+    ///
+    /// Extracts the 1-byte message type and the 4-byte length, then reads
+    /// the corresponding payload payload.
     async fn read_message(stream: &mut TcpStream) -> anyhow::Result<Vec<u8>> {
         let msg_type = stream.read_u8().await?;
 
@@ -175,6 +197,8 @@ impl SecurityUtil {
         msg.extend(&payload);
         Ok(msg)
     }
+
+    /// Derives a 32-byte encryption key from the master key and salt using the `scrypt` KDF.
     fn derive_key(master_key: &[u8], salt: &[u8]) -> anyhow::Result<[u8; 32]> {
         let mut derived_key = [0u8; 32];
         pbkdf2::<Hmac<Sha256>>(master_key, salt, PBKDF2_ITERATIONS, &mut derived_key)
@@ -182,6 +206,10 @@ impl SecurityUtil {
         Ok(derived_key)
     }
 
+    /// Encrypts raw bytes using AES-256-GCM.
+    ///
+    /// Automatically generates a secure random nonce and salt, derives the encryption key
+    /// using `scrypt`, and returns the ciphertext alongside the generated nonce and salt.
     pub fn encrypt_text(
         plaintext: &[u8],
         master_key: &[u8],
@@ -205,6 +233,7 @@ impl SecurityUtil {
         Ok((ciphertext?, nonce_bytes, salt))
     }
 
+    /// Decrypts AES-256-GCM ciphertext using the provided master key, nonce, and salt.
     pub fn decrypt_text(
         ciphertext: &[u8],
         master_key: &[u8],
@@ -225,6 +254,15 @@ impl SecurityUtil {
     }
 
     /// Connect to pgmoneta server using SCRAM-SHA-256 authentication.
+    ///
+    /// # Protocol Flow:
+    /// 1. Sends the initial StartupMessage.
+    /// 2. Receives an AuthenticationSASL response offering SCRAM-SHA-256.
+    /// 3. Sends the SASLInitialResponse (`client_first`).
+    /// 4. Receives the AuthenticationSASLContinue response (`server_first`).
+    /// 5. Sends the SASLResponse (`client_final`).
+    /// 6. Receives the AuthenticationSASLFinal response.
+    /// 7. Awaits the final AuthenticationOk signal.
     pub async fn connect_to_server(
         host: &str,
         port: i32,
@@ -351,6 +389,10 @@ impl SecurityUtil {
         Ok(stream)
     }
 
+    /// Constructs the raw PostgreSQL wire protocol StartupMessage.
+    ///
+    /// The message includes protocol version identifiers alongside the user,
+    /// database (`admin`), and application name (`pgmoneta`) parameters.
     async fn create_startup_message(username: &str) -> anyhow::Result<Vec<u8>> {
         let mut msg = Vec::new();
         let us = username.len();
