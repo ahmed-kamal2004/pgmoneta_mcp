@@ -37,6 +37,7 @@ use serde::Serialize;
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
 use std::fs;
+use std::io::{self, IsTerminal};
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 use tokio::runtime::Runtime;
@@ -47,6 +48,7 @@ const HISTORY_FILE: &str = "pgmoneta-mcp-client.history";
 const HISTORY_MAX_ENTRIES: usize = 1000;
 const CTRL_C_EXIT_TIMEOUT: Duration = Duration::from_secs(2);
 const CLIENT_NAME: &str = "pgmoneta MCP client";
+const CLEAR_TERMINAL_SEQUENCE: &str = "\x1b[2J\x1b[H";
 const CTRL_C_EXIT_MESSAGE: &str = "Press Ctrl+c again to quit";
 const MODEL_COMMAND: &str = "/model";
 const MODEL_COMMAND_PREFIX: &str = "/model ";
@@ -284,6 +286,10 @@ impl Helper for ClientHelper {}
 
 fn main() -> Result<()> {
     let args = Args::parse();
+    let should_clear_terminal = io::stdout().is_terminal();
+    let mut stdout = io::stdout();
+    clear_startup_terminal(&mut stdout, should_clear_terminal)
+        .context("Failed to clear terminal")?;
     let config = configuration::load_client_configuration(&args.conf)?;
     let llm_names = sorted_llm_names(&config.llms);
     let llm_probes = config
@@ -353,6 +359,15 @@ fn main() -> Result<()> {
         env!("CARGO_PKG_VERSION"),
         active_model,
     )
+}
+
+fn clear_startup_terminal(output: &mut impl io::Write, is_terminal: bool) -> io::Result<()> {
+    if !is_terminal {
+        return Ok(());
+    }
+
+    output.write_all(CLEAR_TERMINAL_SEQUENCE.as_bytes())?;
+    output.flush()
 }
 
 fn startup_banner(
@@ -1923,6 +1938,24 @@ mod tests {
             parse_input("/model qwen", &tools, &models, true, ClientMode::User).unwrap(),
             ClientCommand::Model(Some("qwen".to_string()))
         );
+    }
+
+    #[test]
+    fn test_clear_startup_terminal_writes_escape_sequence_for_terminals() {
+        let mut output = Vec::new();
+
+        clear_startup_terminal(&mut output, true).unwrap();
+
+        assert_eq!(output, CLEAR_TERMINAL_SEQUENCE.as_bytes());
+    }
+
+    #[test]
+    fn test_clear_startup_terminal_skips_non_terminals() {
+        let mut output = Vec::new();
+
+        clear_startup_terminal(&mut output, false).unwrap();
+
+        assert!(output.is_empty());
     }
 
     #[test]
