@@ -35,6 +35,8 @@ use rustyline::{
 };
 use serde::Serialize;
 use serde_json::Value;
+use std::borrow::Cow;
+use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io::{self, IsTerminal};
@@ -48,8 +50,20 @@ const HISTORY_FILE: &str = "pgmoneta-mcp-client.history";
 const HISTORY_MAX_ENTRIES: usize = 1000;
 const CTRL_C_EXIT_TIMEOUT: Duration = Duration::from_secs(2);
 const CLIENT_NAME: &str = "pgmoneta MCP client";
+const CLIENT_TITLE_LABEL: &str = "pgmoneta MCP/client";
 const CLEAR_TERMINAL_SEQUENCE: &str = "\x1b[2J\x1b[H";
 const CTRL_C_EXIT_MESSAGE: &str = "Press Ctrl+c again to quit";
+const LOGO_ART_COLOR: &str = "\x1b[38;5;208m";
+const ANSI_RESET: &str = "\x1b[0m";
+const CLIENT_LOGO_ART: &[&str] = &[
+    " ▄▄▀███▄▄▄▄",
+    "███▄▀ █████▄",
+    "▀██████ ███▀",
+    "███████▄▀█▀",
+    " ██████▀█",
+    "    ███▄",
+    "    █▀▀▀",
+];
 const MODEL_COMMAND: &str = "/model";
 const MODEL_COMMAND_PREFIX: &str = "/model ";
 const SLASH_COMMANDS: &[&str] = &[
@@ -191,6 +205,8 @@ type ClientEditor = Editor<ClientHelper, DefaultHistory>;
 
 struct ClientHelper {
     llm_names: Vec<String>,
+    enable_terminal_title: bool,
+    last_terminal_title: RefCell<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -205,8 +221,28 @@ struct InterruptState {
 }
 
 impl ClientHelper {
-    fn new(llm_names: Vec<String>) -> Self {
-        Self { llm_names }
+    fn new(llm_names: Vec<String>, enable_terminal_title: bool) -> Self {
+        Self {
+            llm_names,
+            enable_terminal_title,
+            last_terminal_title: RefCell::new(String::new()),
+        }
+    }
+
+    fn sync_terminal_title(&self, command: Option<&str>) {
+        if !self.enable_terminal_title {
+            return;
+        }
+
+        let title = client_console_title(command);
+        let mut last_terminal_title = self.last_terminal_title.borrow_mut();
+        if *last_terminal_title == title {
+            return;
+        }
+
+        let mut stdout = io::stdout();
+        let _ = pgmoneta_mcp::utils::Utility::write_terminal_title(&mut stdout, &title, true);
+        *last_terminal_title = title;
     }
 }
 
@@ -292,7 +328,21 @@ impl Hinter for ClientHelper {
     }
 }
 
-impl Highlighter for ClientHelper {}
+impl Highlighter for ClientHelper {
+    fn highlight<'l>(&self, line: &'l str, _pos: usize) -> Cow<'l, str> {
+        self.sync_terminal_title(Some(line));
+        Cow::Borrowed(line)
+    }
+
+    fn highlight_prompt<'b, 's: 'b, 'p: 'b>(
+        &'s self,
+        prompt: &'p str,
+        _default: bool,
+    ) -> Cow<'b, str> {
+        self.sync_terminal_title(None);
+        Cow::Borrowed(prompt)
+    }
+}
 impl Validator for ClientHelper {}
 impl Helper for ClientHelper {}
 
@@ -302,6 +352,11 @@ fn main() -> Result<()> {
     let mut stdout = io::stdout();
     clear_startup_terminal(&mut stdout, should_clear_terminal)
         .context("Failed to clear terminal")?;
+    let _ = pgmoneta_mcp::utils::Utility::write_terminal_title(
+        &mut stdout,
+        &client_console_title(None),
+        should_clear_terminal,
+    );
     let config = configuration::load_client_configuration(&args.conf)?;
     let llm_names = sorted_llm_names(&config.llms);
     let llm_probes = config
@@ -389,7 +444,7 @@ fn startup_banner(
     model: Option<&str>,
     model_reachable: bool,
 ) -> String {
-    let lines = [
+    let status_lines = [
         format!("{CLIENT_NAME} {version}"),
         format!("MCP: {client_url} {}", connection_marker(mcp_connected)),
         format!(
@@ -398,28 +453,63 @@ fn startup_banner(
             connection_marker(model_reachable)
         ),
     ];
-    let width = lines
+    let logo_width = CLIENT_LOGO_ART
         .iter()
         .map(|line| visible_width(line))
         .max()
         .unwrap_or(0);
+    let status_width = status_lines
+        .iter()
+        .map(|line| visible_width(line))
+        .max()
+        .unwrap_or(0);
+    let gap_width = 2;
+    let width = logo_width + gap_width + status_width;
     let top_border = format!("┏{}┓", "━".repeat(width + 2));
     let bottom_border = format!("┗{}┛", "━".repeat(width + 2));
 
+    let line_count = CLIENT_LOGO_ART.len().max(status_lines.len());
+    let lines = (0..line_count)
+        .map(|index| {
+            let logo_line = CLIENT_LOGO_ART.get(index).copied().unwrap_or_default();
+            let status_line = status_lines
+                .get(index)
+                .map(String::as_str)
+                .unwrap_or_default();
+            format_side_by_side_banner_line(logo_line, status_line, logo_width, gap_width, width)
+        })
+        .collect::<Vec<_>>();
+
     let mut banner = Vec::with_capacity(lines.len() + 2);
     banner.push(top_border);
-    banner.extend(
-        lines
-            .into_iter()
-            .map(|line| format_banner_line(&line, width)),
-    );
+    banner.extend(lines);
     banner.push(bottom_border);
     banner.join("\n")
 }
 
-fn format_banner_line(line: &str, width: usize) -> String {
-    let padding = width.saturating_sub(visible_width(line));
-    format!("┃ {line}{} ┃", " ".repeat(padding))
+fn format_side_by_side_banner_line(
+    logo_line: &str,
+    status_line: &str,
+    logo_width: usize,
+    gap_width: usize,
+    width: usize,
+) -> String {
+    let logo_padding = logo_width.saturating_sub(visible_width(logo_line));
+    let colored_logo_line = colorize_logo_art_line(logo_line);
+    let content = format!(
+        "{colored_logo_line}{}{status_line}",
+        " ".repeat(logo_padding + gap_width)
+    );
+    let padding = width.saturating_sub(visible_width(&content));
+    format!("┃ {content}{} ┃", " ".repeat(padding))
+}
+
+fn colorize_logo_art_line(line: &str) -> String {
+    if line.trim().is_empty() {
+        return line.to_string();
+    }
+
+    format!("{LOGO_ART_COLOR}{line}{ANSI_RESET}")
 }
 
 fn visible_width(text: &str) -> usize {
@@ -458,7 +548,10 @@ fn run_repl(
     mut active_model: Option<String>,
 ) -> Result<()> {
     let mut editor = ClientEditor::new().context("Failed to initialize line editor")?;
-    editor.set_helper(Some(ClientHelper::new(llm_names.to_vec())));
+    editor.set_helper(Some(ClientHelper::new(
+        llm_names.to_vec(),
+        io::stdout().is_terminal(),
+    )));
     configure_key_bindings(&mut editor);
     initialize_history(&mut editor)?;
     let mut mode = ClientMode::User;
@@ -478,6 +571,8 @@ fn run_repl(
                 if line.is_empty() {
                     continue;
                 }
+
+                set_client_terminal_title(Some(line));
 
                 editor
                     .add_history_entry(line)
@@ -1825,6 +1920,20 @@ fn render_prompt(prompt_target: &str, mode: ClientMode) -> String {
     format!("{prompt_target}{suffix} ")
 }
 
+fn client_console_title(command: Option<&str>) -> String {
+    pgmoneta_mcp::utils::Utility::console_title(CLIENT_TITLE_LABEL, command)
+}
+
+fn set_client_terminal_title(command: Option<&str>) {
+    let mut stdout = io::stdout();
+    let is_terminal = stdout.is_terminal();
+    let _ = pgmoneta_mcp::utils::Utility::write_terminal_title(
+        &mut stdout,
+        &client_console_title(command),
+        is_terminal,
+    );
+}
+
 fn format_tools(tools: &[Tool]) -> String {
     if tools.is_empty() {
         return "No tools available.".to_string();
@@ -2463,6 +2572,20 @@ mod tests {
     }
 
     #[test]
+    fn test_client_console_title_uses_base_label_when_idle() {
+        assert_eq!(client_console_title(None), "🟠 pgmoneta MCP/client");
+        assert_eq!(client_console_title(Some("   ")), "🟠 pgmoneta MCP/client");
+    }
+
+    #[test]
+    fn test_client_console_title_appends_current_command() {
+        assert_eq!(
+            client_console_title(Some("/tools")),
+            "🟠 pgmoneta MCP/client — /tools"
+        );
+    }
+
+    #[test]
     fn test_format_tool_arguments_marks_optional_fields() {
         let schema = serde_json::from_value(json!({
             "properties": {
@@ -2550,9 +2673,19 @@ mod tests {
             true,
         );
 
+        let plain_banner = strip_ansi_codes(&banner);
+        let banner_lines = plain_banner.lines().collect::<Vec<_>>();
+
         assert!(banner.contains("pgmoneta MCP client 0.3.0"));
         assert!(banner.contains("MCP: http://localhost:8000/mcp"));
         assert!(banner.contains("Model: qwen"));
+        assert!(plain_banner.contains("▄▄▀███▄▄▄▄"));
+        assert!(banner_lines[1].contains("pgmoneta MCP client 0.3.0"));
+        assert!(banner_lines[2].contains("MCP: http://localhost:8000/mcp"));
+        assert!(banner_lines[3].contains("Model: qwen"));
+        assert!(banner_lines[1].contains('█'));
+        assert!(banner_lines[2].contains('█'));
+        assert!(banner_lines[3].contains('█'));
         assert!(banner.contains(connection_marker(false)));
         assert!(banner.contains(connection_marker(true)));
         assert!(banner.starts_with('┏'));
@@ -2600,16 +2733,17 @@ mod tests {
         );
 
         let widths = banner.lines().map(strip_ansi_codes).collect::<Vec<_>>();
-
-        assert_eq!(widths[0].chars().count(), widths[1].chars().count());
-        assert_eq!(widths[1].chars().count(), widths[2].chars().count());
-        assert_eq!(widths[2].chars().count(), widths[3].chars().count());
-        assert_eq!(widths[3].chars().count(), widths[4].chars().count());
+        let expected_width = widths[0].chars().count();
+        assert!(
+            widths
+                .iter()
+                .all(|line| line.chars().count() == expected_width)
+        );
     }
 
     #[test]
     fn test_slash_completion_expands_unique_match() {
-        let helper = ClientHelper::new(vec!["gemma".to_string(), "qwen".to_string()]);
+        let helper = ClientHelper::new(vec!["gemma".to_string(), "qwen".to_string()], false);
         let history = DefaultHistory::new();
         let context = ReadlineContext::new(&history);
 
@@ -2622,7 +2756,7 @@ mod tests {
 
     #[test]
     fn test_slash_completion_lists_matching_commands() {
-        let helper = ClientHelper::new(vec!["gemma".to_string(), "qwen".to_string()]);
+        let helper = ClientHelper::new(vec!["gemma".to_string(), "qwen".to_string()], false);
         let history = DefaultHistory::new();
         let context = ReadlineContext::new(&history);
 
@@ -2661,7 +2795,7 @@ mod tests {
 
     #[test]
     fn test_slash_completion_ignores_non_command_inputs() {
-        let helper = ClientHelper::new(vec!["gemma".to_string(), "qwen".to_string()]);
+        let helper = ClientHelper::new(vec!["gemma".to_string(), "qwen".to_string()], false);
         let history = DefaultHistory::new();
         let context = ReadlineContext::new(&history);
 
@@ -2677,7 +2811,7 @@ mod tests {
 
     #[test]
     fn test_model_completion_lists_matching_models() {
-        let helper = ClientHelper::new(vec!["gemma".to_string(), "qwen".to_string()]);
+        let helper = ClientHelper::new(vec!["gemma".to_string(), "qwen".to_string()], false);
         let history = DefaultHistory::new();
         let context = ReadlineContext::new(&history);
 
@@ -2695,7 +2829,7 @@ mod tests {
 
     #[test]
     fn test_model_completion_lists_all_models_after_space() {
-        let helper = ClientHelper::new(vec!["gemma".to_string(), "qwen".to_string()]);
+        let helper = ClientHelper::new(vec!["gemma".to_string(), "qwen".to_string()], false);
         let history = DefaultHistory::new();
         let context = ReadlineContext::new(&history);
 

@@ -18,13 +18,16 @@ use pgmoneta_mcp::configuration;
 use pgmoneta_mcp::handler::PgmonetaHandler;
 use pgmoneta_mcp::logging::Logger;
 use pgmoneta_mcp::telemetry;
+use pgmoneta_mcp::utils::Utility;
 use rmcp::transport::streamable_http_server::{
     StreamableHttpService, session::local::LocalSessionManager,
 };
+use std::io::{self, IsTerminal};
 use std::time::Duration;
 use tower_http::cors::{Any, CorsLayer};
 
 const BIND_ADDRESS: &str = "0.0.0.0";
+const SERVER_TITLE_LABEL: &str = "pgmoneta MCP/server";
 
 #[derive(Debug, Parser)]
 #[command(
@@ -52,6 +55,13 @@ struct Args {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
+    let mut stdout = io::stdout();
+    let is_terminal = stdout.is_terminal();
+    let _ = Utility::write_terminal_title(
+        &mut stdout,
+        &Utility::console_title(SERVER_TITLE_LABEL, None),
+        is_terminal,
+    );
     let config = configuration::load_configuration(&args.conf, &args.users)?;
     let address = format!("{BIND_ADDRESS}:{}", &config.pgmoneta_mcp.port);
 

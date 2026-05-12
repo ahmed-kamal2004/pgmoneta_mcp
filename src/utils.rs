@@ -14,7 +14,12 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 use anyhow::{Result, bail};
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
+
+pub const CONSOLE_TITLE_ICON: &str = "🟠";
+const TERMINAL_TITLE_SEQUENCE_PREFIX: &str = "\x1b]0;";
+const TERMINAL_TITLE_SEQUENCE_SUFFIX: &str = "\x07";
 
 /// Provides general-purpose helper functions for the application.
 pub struct Utility;
@@ -56,6 +61,42 @@ impl Utility {
             format!("{:.2} TB", size as f64 / TB as f64)
         }
     }
+
+    pub fn console_title(label: &str, detail: Option<&str>) -> String {
+        let title = format!("{CONSOLE_TITLE_ICON} {}", sanitize_terminal_title(label));
+        match detail
+            .map(sanitize_terminal_title)
+            .filter(|detail| !detail.is_empty())
+        {
+            Some(detail) => format!("{title} — {detail}"),
+            None => title,
+        }
+    }
+
+    pub fn write_terminal_title(
+        output: &mut impl Write,
+        title: &str,
+        is_terminal: bool,
+    ) -> io::Result<()> {
+        if !is_terminal {
+            return Ok(());
+        }
+
+        write!(
+            output,
+            "{TERMINAL_TITLE_SEQUENCE_PREFIX}{}{TERMINAL_TITLE_SEQUENCE_SUFFIX}",
+            sanitize_terminal_title(title)
+        )?;
+        output.flush()
+    }
+}
+
+fn sanitize_terminal_title(text: &str) -> String {
+    text.chars()
+        .filter(|ch| !ch.is_control())
+        .collect::<String>()
+        .trim()
+        .to_string()
 }
 
 impl SafeFileReader {
@@ -239,5 +280,43 @@ mod tests {
                 .to_string()
                 .contains("Access denied")
         );
+    }
+
+    #[test]
+    fn test_console_title_uses_icon_and_optional_detail() {
+        assert_eq!(
+            Utility::console_title("pgmoneta MCP/server", None),
+            "🟠 pgmoneta MCP/server"
+        );
+        assert_eq!(
+            Utility::console_title("pgmoneta MCP/client", Some("/tools")),
+            "🟠 pgmoneta MCP/client — /tools"
+        );
+    }
+
+    #[test]
+    fn test_console_title_sanitizes_control_characters() {
+        assert_eq!(
+            Utility::console_title("pgmoneta MCP/client\u{7}", Some("/tools\x1b[31m")),
+            "🟠 pgmoneta MCP/client — /tools[31m"
+        );
+    }
+
+    #[test]
+    fn test_write_terminal_title_writes_escape_sequence_for_terminals() {
+        let mut output = Vec::new();
+
+        Utility::write_terminal_title(&mut output, "🟠 pgmoneta MCP/server", true).unwrap();
+
+        assert_eq!(output, b"\x1b]0;\xF0\x9F\x9F\xA0 pgmoneta MCP/server\x07");
+    }
+
+    #[test]
+    fn test_write_terminal_title_skips_non_terminals() {
+        let mut output = Vec::new();
+
+        Utility::write_terminal_title(&mut output, "ignored", false).unwrap();
+
+        assert!(output.is_empty());
     }
 }
