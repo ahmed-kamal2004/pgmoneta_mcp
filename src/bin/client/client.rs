@@ -392,19 +392,14 @@ fn main() -> Result<()> {
         config.client.timeout,
     ));
 
-    println!(
-        "{}",
-        startup_banner(
-            env!("CARGO_PKG_VERSION"),
-            &config.client.url,
-            client.is_some(),
-            active_model_endpoint(&llm_probes, active_model.as_deref()),
-            active_model.as_deref(),
-            model_reachable,
-        ),
+    print_status_header(
+        env!("CARGO_PKG_VERSION"),
+        &config.client.url,
+        client.is_some(),
+        active_model_endpoint(&llm_probes, active_model.as_deref()),
+        active_model.as_deref(),
+        model_reachable,
     );
-    println!("• Help: /help");
-    println!();
 
     run_repl(
         &runtime,
@@ -442,6 +437,7 @@ fn startup_banner(
 ) -> String {
     let status_lines = [
         format!("{CLIENT_NAME} {version}"),
+        String::new(),
         format!("MCP: {client_url} {}", connection_marker(mcp_connected)),
         format!(
             "LLM: {} {}",
@@ -453,6 +449,8 @@ fn startup_banner(
             model_label(model),
             connection_marker(model_reachable)
         ),
+        String::new(),
+        "Help: /help".to_string(),
     ];
     let logo_width = CLIENT_LOGO_ART
         .iter()
@@ -1868,7 +1866,7 @@ fn print_status_header(
     model_reachable: bool,
 ) {
     println!(
-        "{}",
+        "{}\n",
         startup_banner(
             version,
             client_url,
@@ -2824,15 +2822,20 @@ mod tests {
         assert!(banner.contains("MCP: http://localhost:8000/mcp"));
         assert!(banner.contains("LLM: http://localhost:11434"));
         assert!(banner.contains("Model: qwen"));
+        assert!(banner.contains("Help: /help"));
         assert!(plain_banner.contains("▄▄▀███▄▄▄▄"));
         assert!(banner_lines[1].contains("pgmoneta MCP client 0.3.0"));
-        assert!(banner_lines[2].contains("MCP: http://localhost:8000/mcp"));
-        assert!(banner_lines[3].contains("LLM: http://localhost:11434"));
-        assert!(banner_lines[4].contains("Model: qwen"));
+        assert!(banner_lines[3].contains("MCP: http://localhost:8000/mcp"));
+        assert!(banner_lines[4].contains("LLM: http://localhost:11434"));
+        assert!(banner_lines[5].contains("Model: qwen"));
+        assert!(banner_lines[7].contains("Help: /help"));
         assert!(banner_lines[1].contains('█'));
         assert!(banner_lines[2].contains('█'));
         assert!(banner_lines[3].contains('█'));
         assert!(banner_lines[4].contains('█'));
+        assert!(banner_lines[5].contains('█'));
+        assert!(banner_lines[6].contains('█'));
+        assert!(banner_lines[7].contains('█'));
         assert!(banner.contains(connection_marker(false)));
         assert!(banner.contains(connection_marker(true)));
         assert!(banner.starts_with('┏'));
