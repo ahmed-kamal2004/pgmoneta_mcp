@@ -37,6 +37,30 @@ Models
 
 See [doc/LOCAL_LLM.md](doc/LOCAL_LLM.md) for installation and configuration instructions.
 
+Quick copy/paste example (llama.cpp):
+
+```sh
+llama-server \
+  -hf ggml-org/gemma-4-E4B-it-GGUF \
+  --alias "ggml-org/gemma-4-E4B-it-GGUF" \
+  --port 8100 \
+  --ctx-size 65536 \
+  --reasoning-budget 512 \
+  -t 4
+```
+
+```ini
+[pgmoneta_mcp_client]
+url = http://localhost:6432/mcp
+timeout = 30
+
+[gemma]
+provider = llama.cpp
+endpoint = http://localhost:8100/v1
+model = ggml-org/gemma-4-E4B-it-GGUF
+max_tool_rounds = 10
+```
+
 ## Compiling the source
 
 **pgmoneta** requires

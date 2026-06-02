@@ -50,20 +50,20 @@ The MCP client is called `pgmoneta-mcp-client`, and its configuration in `pgmone
 
 ```ini
 [pgmoneta_mcp_client]
-url = http://localhost:8000/mcp
-model = qwen
+url = http://localhost:6432/mcp
+timeout = 30
+model = gemma
 
 [qwen]
-provider = ramalama
-endpoint = http://localhost:8080
-model = qwen2.5vl:7b
+provider = ollama
+endpoint = http://localhost:11434
+model = qwen2.5:3b
 max_tool_rounds = 10
 
 [gemma]
 provider = llama.cpp
 endpoint = http://localhost:8100/v1
-model = ggml-org/gemma-3-4b-it-GGUF
-max_tool_rounds = 10
+model = ggml-org/gemma-4-E4B-it-GGUF
 ```
 
 for example.
@@ -157,6 +157,9 @@ dnf install wget
 
 Download the latest `llama-server` from the [official releases](https://github.com/ggml-org/llama.cpp/releases).
 
+If you build `llama.cpp` from source, the server binary is typically available as
+`./build/bin/llama-server`.
+
 ### Storage Management
 
 llama.cpp requires you to download the `.gguf` files manually. Simply download these files directly to your preferred high-capacity drive (e.g., `/mnt/ai/models/`) to avoid disk exhaustion.
@@ -181,6 +184,59 @@ wget https://huggingface.co/bartowski/Meta-Llama-3.1-70B-Instruct-GGUF/resolve/m
 llama-server --model /mnt/ai/models/Meta-Llama-3.1-70B-Instruct-Q4_K_M.gguf --port 8080 --ctx-size 8192
 ```
 
+### Copy/paste llama.cpp setup for pgmoneta MCP
+
+The following commands mirror a practical setup used in production-like local environments.
+
+Gemma:
+
+```sh
+LLAMA_CACHE=/mnt/ai/llama.cpp/  llama-server \
+  -hf ggml-org/gemma-4-E4B-it-GGUF \
+  --alias "ggml-org/gemma-4-E4B-it-GGUF" \
+  --port 8100 \
+  --ctx-size 65536 \
+  --reasoning-budget 512 \
+  -t 4
+```
+
+Qwen Coder:
+
+```sh
+LLAMA_CACHE=/mnt/ai/llama.cpp/  llama-server \
+  -hf unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF \
+  --alias "unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF" \
+  --port 8100 \
+  --ctx-size 65536 \
+  --reasoning-budget 512 \
+  -t 4
+```
+
+Run from a local build:
+
+```sh
+LLAMA_CACHE=/mnt/ai/llama.cpp/ ./build/bin/llama-server \
+  -hf ggml-org/gemma-4-E4B-it-GGUF \
+  --port 8100 \
+  --ctx-size 65536 \
+  --reasoning-budget 512 \
+  -t 4
+```
+
+Run from a system-wide installation with a downloaded GGUF file:
+
+```sh
+llama-server \
+  -m ~/.cache/huggingface/hub/models--ggml-org--gemma-4-E4B-it-GGUF/snapshots/*/gemma-4-E4B-it-Q4_K_M.gguf \
+  --alias "ggml-org/gemma-4-E4B-it-GGUF" \
+  --port 8100 \
+  --ctx-size 65536 \
+  --reasoning-budget 512 \
+  -t 4
+```
+
+The endpoint for this setup is `http://localhost:8100/v1`.
+
 ### Example
 
 ```ini
@@ -189,6 +245,44 @@ provider = llama.cpp
 endpoint = http://localhost:8080/v1
 model = granite-3.0-8b-instruct-Q4_K_M.gguf
 max_tool_rounds = 10
+```
+
+### Multi-profile MCP client configuration (qwen, gemma, coder)
+
+Use named client profiles to switch quickly between models while staying connected to
+the same MCP server.
+
+```ini
+[pgmoneta_mcp_client]
+url = http://localhost:6432/mcp
+timeout = 30
+model = gemma
+
+[qwen]
+provider = ollama
+endpoint = http://localhost:11434
+model = qwen2.5:3b
+max_tool_rounds = 10
+
+[gemma]
+provider = llama.cpp
+endpoint = http://localhost:8100/v1
+model = ggml-org/gemma-4-E4B-it-GGUF
+max_tool_rounds = 10
+
+[coder]
+provider = llama.cpp
+endpoint = http://localhost:8100/v1
+model = unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF
+max_tool_rounds = 10
+```
+
+Switch profiles at runtime in `pgmoneta-mcp-client`:
+
+```text
+/model gemma
+/model qwen
+/model coder
 ```
 
 ## RamaLama
