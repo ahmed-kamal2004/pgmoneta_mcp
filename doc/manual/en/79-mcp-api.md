@@ -158,6 +158,67 @@ Create an incremental backup:
 }
 ```
 
+#### annotate_backup
+
+**Description**: Adds, updates, or removes a comment annotation on a backup.
+
+**Parameters**:
+- `username` (string, required): pgmoneta admin username
+- `server` (string, required): Server name as configured in pgmoneta
+- `backup_id` (string, required): Backup identifier (can be backup label, "newest", "latest", or "oldest")
+- `action` (string, required): Annotation action. Supported values: `add`, `update`, `remove`
+- `key` (string, required): Annotation key
+- `comment` (string, required for `add` and `update` actions, not required for `remove` action): Annotation text
+
+**Examples**:
+
+Add a comment:
+
+```json
+{
+  "tool": "annotate_backup",
+  "arguments": {
+    "username": "admin",
+    "server": "primary",
+    "backup_id": "latest",
+    "action": "add",
+    "key": "mykey",
+    "comment": "mycomment"
+  }
+}
+```
+
+Update a comment:
+
+```json
+{
+  "tool": "annotate_backup",
+  "arguments": {
+    "username": "admin",
+    "server": "primary",
+    "backup_id": "latest",
+    "action": "update",
+    "key": "mykey",
+    "comment": "mynewcomment"
+  }
+}
+```
+
+Remove a comment:
+
+```json
+{
+  "tool": "annotate_backup",
+  "arguments": {
+    "username": "admin",
+    "server": "primary",
+    "backup_id": "latest",
+    "action": "remove",
+    "key": "mykey"
+  }
+}
+```
+
 #### get_backup_info
 
 **Description**: Retrieves detailed information about a specific backup.

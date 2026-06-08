@@ -75,6 +75,7 @@ prometheus-client = "0.24.0"
 inquire = "0.9.4"
 treelog = { version = "0.0.6", features = ["arbitrary-json"] }
 rustyline = "17.0.1"
+serial_test = "3.5.0"
 [target.'cfg(windows)'.dependencies]
 winlog2 = "0.3.2"
 log = "0.4.29"

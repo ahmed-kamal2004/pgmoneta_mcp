@@ -207,5 +207,9 @@ admin@localhost:8000/mcp$ List backups on primary server
 admin@localhost:8000/mcp$ metric {"name":"pgmoneta_version"}
 admin@localhost:8000/mcp$ /developer
 admin@localhost:8000/mcp$ list_backups {"server":"primary"}
+admin@localhost:8000/mcp$ annotate_backup {"server":"primary","backup_id":"newest","action":"add","key":"mykey","comment":"mycomment"}
+admin@localhost:8000/mcp$ annotate_backup {"server":"primary","backup_id":"newest","action":"update","key":"mykey","comment":"mynewcomment"}
+admin@localhost:8000/mcp$ annotate_backup {"server":"primary","backup_id":"newest","action":"remove","key":"mykey"}
+admin@localhost:8000/mcp$ get_backup_info {"server":"primary","backup_id":"newest"}
 admin@localhost:8000/mcp# metric {"name":"pgmoneta_retention_server","attributes":{"server":"primary"}}
 ```

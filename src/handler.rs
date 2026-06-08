@@ -13,6 +13,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+pub mod annotate;
 pub mod backup;
 pub mod clear;
 pub mod compression;
@@ -52,6 +53,7 @@ impl PgmonetaHandler {
     /// Builds the tool router by registering each tool via the trait-based API.
     pub fn tool_router() -> ToolRouter<Self> {
         ToolRouter::new()
+            .with_async_tool::<annotate::AnnotateBackupTool>()
             .with_async_tool::<backup::BackupServerTool>()
             .with_async_tool::<clear::ClearTool>()
             .with_async_tool::<info::GetBackupInfoTool>()
