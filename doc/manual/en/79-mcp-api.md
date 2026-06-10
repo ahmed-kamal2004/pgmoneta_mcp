@@ -229,6 +229,23 @@ Create an incremental backup:
 }
 ```
 
+#### clear
+
+**Description**: Clears/Resets the data/statistics of prometheus.
+
+**Parameters**:
+- `username` (string, required): pgmoneta admin username
+
+**Example**:
+```json
+{
+  "tool": "clear",
+  "arguments": {
+    "username": "admin"
+  }
+}
+```
+
 #### metric
 
 **Description**: Returns Prometheus metric samples exposed by pgmoneta.
