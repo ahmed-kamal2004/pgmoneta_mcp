@@ -20,6 +20,7 @@ mod encryption;
 mod info;
 mod metrics;
 mod mode;
+mod progress;
 mod retention;
 mod shutdown;
 mod verify;

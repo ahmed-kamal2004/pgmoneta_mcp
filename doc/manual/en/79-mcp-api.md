@@ -317,6 +317,25 @@ pgmoneta_retention_server{server="standby"} 14
 }
 ```
 
+#### progress
+**Description**: Retrieves the progress of ongoing (backup) operations.
+**Parameters**:
+- `username` (string, required): pgmoneta admin username
+- `server` (string, required): Server name as configured in pgmoneta
+- `command` (string, required): Command to check progress for (e.g., "backup")
+
+**Example**:
+```json
+{
+  "tool": "progress",
+  "arguments": {
+    "username": "admin",
+    "server": "primary",
+    "command": "backup"
+  }
+}
+```
+
 ### Data Translation
 
 The MCP server automatically translates raw pgmoneta responses into human-readable formats:

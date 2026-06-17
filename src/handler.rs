@@ -20,6 +20,7 @@ pub mod encryption;
 pub mod info;
 pub mod metrics;
 pub mod mode;
+pub mod progress;
 pub mod retention;
 pub mod shutdown;
 pub mod verify;
@@ -68,6 +69,7 @@ impl PgmonetaHandler {
             .with_async_tool::<encryption::EncryptFileTool>()
             .with_async_tool::<encryption::DecryptFileTool>()
             .with_async_tool::<verify::VerifyBackupTool>()
+            .with_async_tool::<progress::ProgressTool>()
     }
 }
 

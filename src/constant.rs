@@ -94,6 +94,8 @@ impl Command {
     pub const CONF_SET: u32 = 23;
     /// Command to switch server online/offline mode.
     pub const MODE: u32 = 24;
+    /// Command to get progress of an operation.
+    pub const PROGRESS: u32 = 25;
 
     /// Translates a numeric management command code into its string representation.
     ///
@@ -128,6 +130,7 @@ impl Command {
             Self::CONF_GET => Ok("conf get"),
             Self::CONF_SET => Ok("conf set"),
             Self::MODE => Ok("mode"),
+            Self::PROGRESS => Ok("progress"),
             default => Err(anyhow!("Unrecognized command enum: {default}")),
         }
     }
@@ -404,6 +407,11 @@ impl ManagementError {
     pub const MANAGEMENT_ERROR_MODE_ERROR: u32 = 2804;
     pub const MANAGEMENT_ERROR_MODE_UNKNOWN_ACTION: u32 = 2805;
 
+    pub const MANAGEMENT_ERROR_PROGRESS_NOSERVER: u32 = 3000;
+    pub const MANAGEMENT_ERROR_PROGRESS_NOFORK: u32 = 3001;
+    pub const MANAGEMENT_ERROR_PROGRESS_NETWORK: u32 = 3002;
+    pub const MANAGEMENT_ERROR_PROGRESS_ERROR: u32 = 3003;
+
     /// Translates a numeric management error code into a human-readable string.
     ///
     /// # Arguments
@@ -605,6 +613,11 @@ impl ManagementError {
             Self::MANAGEMENT_ERROR_MODE_NETWORK => "Mode: network error",
             Self::MANAGEMENT_ERROR_MODE_ERROR => "Mode: error",
             Self::MANAGEMENT_ERROR_MODE_UNKNOWN_ACTION => "Mode: unknown action",
+
+            Self::MANAGEMENT_ERROR_PROGRESS_NOSERVER => "Progress: no server",
+            Self::MANAGEMENT_ERROR_PROGRESS_NOFORK => "Progress: no fork",
+            Self::MANAGEMENT_ERROR_PROGRESS_NETWORK => "Progress: network error",
+            Self::MANAGEMENT_ERROR_PROGRESS_ERROR => "Progress: error",
 
             _ => "Unknown error",
         }
