@@ -18,16 +18,10 @@ use crate::constant::Command;
 use serde::Serialize;
 
 #[derive(Serialize, Clone, Debug)]
-struct ClearRequest {
-    #[serde(rename = "Prometheus")]
-    prometheus: String,
-}
+struct ClearRequest {}
 
 impl PgmonetaClient {
     pub async fn request_clear_data(username: &str) -> anyhow::Result<String> {
-        let clear_request = ClearRequest {
-            prometheus: "prometheus".to_string(),
-        };
-        Self::forward_request(username, Command::RESET, clear_request).await
+        Self::forward_request(username, Command::RESET, ClearRequest {}).await
     }
 }

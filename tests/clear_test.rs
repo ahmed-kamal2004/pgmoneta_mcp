@@ -58,11 +58,8 @@ async fn clear_data_test() {
     let response_request = json
         .get("Request")
         .unwrap_or_else(|| panic!("Request field missing in response: {response}"));
-    let prometheus = response_request
-        .get("Prometheus")
-        .unwrap_or_else(|| panic!("Prometheus field missing in Request: {response}"));
-    assert_eq!(
-        prometheus, "prometheus",
-        "unexpected Prometheus value in response: {response}"
+    assert!(
+        response_request.as_object().unwrap().is_empty(),
+        "unexpected request in response: {response}"
     );
 }
