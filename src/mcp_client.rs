@@ -68,12 +68,12 @@ impl McpClient {
     }
 
     /// Returns the server's name, version, and the connected URL.
-    pub fn server_info(&self) -> Option<(&str, &str, &str)> {
+    pub fn server_info(&self) -> Option<(String, String, String)> {
         self.session.peer_info().map(|info| {
             (
-                info.server_info.name.as_str(),
-                info.server_info.version.as_str(),
-                self.url.as_str(),
+                info.server_info.name.clone(),
+                info.server_info.version.clone(),
+                self.url.clone(),
             )
         })
     }

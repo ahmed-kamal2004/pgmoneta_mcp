@@ -163,7 +163,7 @@ impl AppInspector {
         Ok(())
     }
 
-    pub fn server_info(&self) -> Option<(&str, &str, &str)> {
+    pub fn server_info(&self) -> Option<(String, String, String)> {
         self.client.server_info()
     }
 
