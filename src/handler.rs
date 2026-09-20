@@ -22,6 +22,7 @@ pub mod conf;
 pub mod delete;
 pub mod encryption;
 pub mod info;
+pub mod job;
 pub mod metrics;
 pub mod mode;
 pub mod ping;
@@ -63,6 +64,12 @@ impl PgmonetaHandler {
             .with_async_tool::<clear::ClearTool>()
             .with_async_tool::<info::GetBackupInfoTool>()
             .with_async_tool::<info::ListBackupsTool>()
+            .with_async_tool::<job::JobTool>()
+            .with_async_tool::<job::JobStatusTool>()
+            .with_async_tool::<job::JobListAllTool>()
+            .with_async_tool::<job::JobListServerTool>()
+            .with_async_tool::<job::JobListStatusTool>()
+            .with_async_tool::<job::JobRemoveTool>()
             .with_async_tool::<metrics::GetMetricsTool>()
             .with_async_tool::<metrics::MetricTool>()
             .with_async_tool::<retention::RetainBackupTool>()

@@ -27,6 +27,7 @@ async fn create_backup_for_delete_test(handler: &PgmonetaHandler) -> anyhow::Res
         username: "backup_user".to_string(),
         server: "primary".to_string(),
         backup_id: None,
+        asynchronous: None,
     };
 
     let response = BackupServerTool::invoke(handler, request)
@@ -59,7 +60,7 @@ async fn create_backup_for_delete_test(handler: &PgmonetaHandler) -> anyhow::Res
 
 #[tokio::test]
 #[serial]
-#[ignore = "requires pgmoneta stack (see test/check.sh and full-test CI job)"]
+#[ignore = "requires pgmoneta stack (see test/check.sh )"]
 async fn delete_backup_without_force_test() {
     let _container = common::init_config().await;
 
@@ -75,6 +76,7 @@ async fn delete_backup_without_force_test() {
         server: "primary".to_string(),
         backup_id: "newest".to_string(),
         force: Some(false),
+        asynchronous: None,
     };
 
     let delete_response =
@@ -99,7 +101,7 @@ async fn delete_backup_without_force_test() {
 
 #[tokio::test]
 #[serial]
-#[ignore = "requires pgmoneta stack (see test/check.sh and full-test CI job)"]
+#[ignore = "requires pgmoneta stack (see test/check.sh )"]
 async fn delete_backup_with_force_test() {
     let _container = common::init_config().await;
 
@@ -114,6 +116,7 @@ async fn delete_backup_with_force_test() {
         server: "primary".to_string(),
         backup_id: "newest".to_string(),
         force: Some(true),
+        asynchronous: None,
     };
 
     let delete_response =

@@ -29,7 +29,7 @@ const DECRYPT_FIXTURE_ARCHIVE: &str = "/tmp/pgmoneta-mcp-decrypt-fixture.txt.aes
 
 #[tokio::test]
 #[serial]
-#[ignore = "requires pgmoneta stack (see test/check.sh and full-test CI job)"]
+#[ignore = "requires pgmoneta stack (see test/check.sh )"]
 async fn encrypt_file_test() {
     let _container = common::init_config().await;
     common::prepare_encrypt_fixture(&_container).await;
@@ -69,7 +69,7 @@ async fn encrypt_file_test() {
 
 #[tokio::test]
 #[serial]
-#[ignore = "requires pgmoneta stack (see test/check.sh and full-test CI job)"]
+#[ignore = "requires pgmoneta stack (see test/check.sh )"]
 async fn decrypt_file_test() {
     let _container = common::init_config().await;
     common::prepare_decrypt_fixture(&_container).await;

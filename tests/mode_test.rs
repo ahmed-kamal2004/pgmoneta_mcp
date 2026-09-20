@@ -44,7 +44,7 @@ fn assert_command_and_status(response: &str, json: &Value, expected_command: &st
 
 #[tokio::test]
 #[serial]
-#[ignore = "requires pgmoneta stack (see test/check.sh and full-test CI job)"]
+#[ignore = "requires pgmoneta stack (see test/check.sh )"]
 async fn set_mode_online_test() {
     let _container = common::init_config().await;
 
@@ -65,7 +65,7 @@ async fn set_mode_online_test() {
 
 #[tokio::test]
 #[serial]
-#[ignore = "requires pgmoneta stack (see test/check.sh and full-test CI job)"]
+#[ignore = "requires pgmoneta stack (see test/check.sh )"]
 async fn set_mode_offline_test() {
     let _container = common::init_config().await;
 

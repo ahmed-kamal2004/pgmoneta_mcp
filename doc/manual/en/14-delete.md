@@ -2,6 +2,9 @@
 
 # Delete
 
+Deletion can run in the background by setting the `delete` tool's `async`
+argument to `true`. Use the returned job identifier with `job` to inspect it.
+
 **Natural language description**
 
 Delete a backup from pgmoneta.

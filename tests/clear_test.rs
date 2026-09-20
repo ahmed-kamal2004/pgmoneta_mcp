@@ -23,7 +23,7 @@ mod common;
 
 #[tokio::test]
 #[serial]
-#[ignore = "requires pgmoneta stack (see test/check.sh and full-test CI job)"]
+#[ignore = "requires pgmoneta stack (see test/check.sh )"]
 async fn clear_data_test() {
     let _container = common::init_config().await;
 

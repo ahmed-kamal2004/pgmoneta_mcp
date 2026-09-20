@@ -63,7 +63,7 @@ fn assert_success_annotate_response(response: &str) {
 
 #[tokio::test]
 #[serial]
-#[ignore = "requires pgmoneta stack (see test/check.sh and full-test CI job)"]
+#[ignore = "requires pgmoneta stack (see test/check.sh )"]
 async fn annotate_add_comment_test() {
     let _container = common::init_config().await;
     let _guard = common::backup_fixture_lock().await;
@@ -108,7 +108,7 @@ async fn annotate_add_comment_test() {
 
 #[tokio::test]
 #[serial]
-#[ignore = "requires pgmoneta stack (see test/check.sh and full-test CI job)"]
+#[ignore = "requires pgmoneta stack (see test/check.sh )"]
 async fn annotate_update_comment_test() {
     let _container = common::init_config().await;
     let _guard = common::backup_fixture_lock().await;
@@ -166,7 +166,7 @@ async fn annotate_update_comment_test() {
 
 #[tokio::test]
 #[serial]
-#[ignore = "requires pgmoneta stack (see test/check.sh and full-test CI job)"]
+#[ignore = "requires pgmoneta stack (see test/check.sh )"]
 async fn annotate_remove_comment_test() {
     let _container = common::init_config().await;
     let _guard = common::backup_fixture_lock().await;

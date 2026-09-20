@@ -26,7 +26,7 @@ mod common;
 
 #[tokio::test]
 #[serial]
-#[ignore = "requires pgmoneta stack (see test/check.sh and full-test CI job)"]
+#[ignore = "requires pgmoneta stack (see test/check.sh )"]
 async fn conf_reload_test() {
     let _container = common::init_config().await;
 
@@ -54,7 +54,7 @@ async fn conf_reload_test() {
 
 #[tokio::test]
 #[serial]
-#[ignore = "requires pgmoneta stack (see test/check.sh and full-test CI job)"]
+#[ignore = "requires pgmoneta stack (see test/check.sh )"]
 async fn conf_ls_test() {
     let _container = common::init_config().await;
 
@@ -82,7 +82,7 @@ async fn conf_ls_test() {
 
 #[tokio::test]
 #[serial]
-#[ignore = "requires pgmoneta stack (see test/check.sh and full-test CI job)"]
+#[ignore = "requires pgmoneta stack (see test/check.sh )"]
 async fn conf_get_test() {
     let _container = common::init_config().await;
 
@@ -110,7 +110,7 @@ async fn conf_get_test() {
 
 #[tokio::test]
 #[serial]
-#[ignore = "requires pgmoneta stack (see test/check.sh and full-test CI job)"]
+#[ignore = "requires pgmoneta stack (see test/check.sh )"]
 async fn conf_set_test() {
     let _container = common::init_config().await;
 

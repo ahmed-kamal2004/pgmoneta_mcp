@@ -23,7 +23,7 @@ mod common;
 
 #[tokio::test]
 #[serial]
-#[ignore = "requires pgmoneta stack (see test/check.sh and full-test CI job)"]
+#[ignore = "requires pgmoneta stack (see test/check.sh )"]
 async fn backup_server_test() {
     let _container = common::init_config().await;
 
@@ -32,6 +32,7 @@ async fn backup_server_test() {
         username: "backup_user".to_string(),
         server: "primary".to_string(),
         backup_id: None,
+        asynchronous: None,
     };
 
     let response = BackupServerTool::invoke(&handler, request)
@@ -62,7 +63,7 @@ async fn backup_server_test() {
 
 #[tokio::test]
 #[serial]
-#[ignore = "requires pgmoneta stack (see test/check.sh and full-test CI job)"]
+#[ignore = "requires pgmoneta stack (see test/check.sh )"]
 async fn incremental_backup_test() {
     let _container = common::init_config().await;
 
@@ -71,6 +72,7 @@ async fn incremental_backup_test() {
         username: "backup_user".to_string(),
         server: "primary".to_string(),
         backup_id: None,
+        asynchronous: None,
     };
 
     // create initial full backup at first
@@ -83,6 +85,7 @@ async fn incremental_backup_test() {
         username: "backup_user".to_string(),
         server: "primary".to_string(),
         backup_id: Some("oldest".to_string()),
+        asynchronous: None,
     };
 
     let incremental_response = BackupServerTool::invoke(&handler, incremental_request)

@@ -7,7 +7,7 @@ use serial_test::serial;
 mod common;
 #[tokio::test]
 #[serial]
-#[ignore = "requires pgmoneta stack (see test/check.sh and full-test CI job)"]
+#[ignore = "requires pgmoneta stack (see test/check.sh )"]
 async fn info_test() {
     let _container = common::init_config().await;
     let _guard = common::backup_fixture_lock().await;

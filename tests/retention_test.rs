@@ -44,7 +44,7 @@ fn assert_command_and_status(response: &str, json: &Value, expected_command: &st
 
 #[tokio::test]
 #[serial]
-#[ignore = "requires pgmoneta stack (see test/check.sh and full-test CI job)"]
+#[ignore = "requires pgmoneta stack (see test/check.sh )"]
 async fn retain_backup_test() {
     let _container = common::init_config().await;
     let _guard = common::backup_fixture_lock().await;
@@ -70,7 +70,7 @@ async fn retain_backup_test() {
 
 #[tokio::test]
 #[serial]
-#[ignore = "requires pgmoneta stack (see test/check.sh and full-test CI job)"]
+#[ignore = "requires pgmoneta stack (see test/check.sh )"]
 async fn retain_with_cascade_backup_test() {
     let _container = common::init_config().await;
     let _guard = common::backup_fixture_lock().await;
@@ -107,7 +107,7 @@ async fn retain_with_cascade_backup_test() {
 
 #[tokio::test]
 #[serial]
-#[ignore = "requires pgmoneta stack (see test/check.sh and full-test CI job)"]
+#[ignore = "requires pgmoneta stack (see test/check.sh )"]
 async fn expunge_backup_test() {
     let _container = common::init_config().await;
     let _guard = common::backup_fixture_lock().await;

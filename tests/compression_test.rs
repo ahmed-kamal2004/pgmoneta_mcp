@@ -28,7 +28,7 @@ const DECOMPRESS_FIXTURE_PATH: &str = "/tmp/pgmoneta-mcp-decompress-fixture.txt.
 
 #[tokio::test]
 #[serial]
-#[ignore = "requires pgmoneta stack (see test/check.sh and full-test CI job)"]
+#[ignore = "requires pgmoneta stack (see test/check.sh )"]
 async fn compress_file_test() {
     let _container = common::init_config().await;
     common::prepare_compress_fixture(&_container).await;
@@ -68,7 +68,7 @@ async fn compress_file_test() {
 
 #[tokio::test]
 #[serial]
-#[ignore = "requires pgmoneta stack (see test/check.sh and full-test CI job)"]
+#[ignore = "requires pgmoneta stack (see test/check.sh )"]
 async fn decompress_file_test() {
     let _container = common::init_config().await;
     common::prepare_decompress_fixture(&_container).await;

@@ -52,7 +52,7 @@ fn assert_success_archive_response(response: &str) -> Value {
 
 #[tokio::test]
 #[serial]
-#[ignore = "requires pgmoneta stack (see test/check.sh and full-test CI job)"]
+#[ignore = "requires pgmoneta stack (see test/check.sh )"]
 async fn archive_with_current_primary_test() {
     let _container = common::init_config().await;
     let _guard = common::backup_fixture_lock().await;
@@ -66,6 +66,7 @@ async fn archive_with_current_primary_test() {
         server: "primary".to_string(),
         backup_id: "newest".to_string(),
         directory: "/tmp/archive".to_string(),
+        asynchronous: None,
         current: Some(true),
         primary: Some(true),
         replica: None,
@@ -96,7 +97,7 @@ async fn archive_with_current_primary_test() {
 
 #[tokio::test]
 #[serial]
-#[ignore = "requires pgmoneta stack (see test/check.sh and full-test CI job)"]
+#[ignore = "requires pgmoneta stack (see test/check.sh )"]
 async fn archive_with_primary_action_timeline_test() {
     let _container = common::init_config().await;
     let _guard = common::backup_fixture_lock().await;
@@ -110,6 +111,7 @@ async fn archive_with_primary_action_timeline_test() {
         server: "primary".to_string(),
         backup_id: "newest".to_string(),
         directory: "/tmp/archive".to_string(),
+        asynchronous: None,
         current: None,
         primary: Some(true),
         replica: None,
@@ -140,7 +142,7 @@ async fn archive_with_primary_action_timeline_test() {
 
 #[tokio::test]
 #[serial]
-#[ignore = "requires pgmoneta stack (see test/check.sh and full-test CI job)"]
+#[ignore = "requires pgmoneta stack (see test/check.sh )"]
 async fn archive_with_primary_replica_test() {
     let _container = common::init_config().await;
     let _guard = common::backup_fixture_lock().await;
@@ -154,6 +156,7 @@ async fn archive_with_primary_replica_test() {
         server: "primary".to_string(),
         backup_id: "newest".to_string(),
         directory: "/tmp/archive".to_string(),
+        asynchronous: None,
         current: None,
         primary: Some(true),
         replica: Some(true),
