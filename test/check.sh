@@ -857,6 +857,7 @@ case "$SUBCOMMAND" in
         ;;
     ci)
         trap ci_shutdown EXIT
+        export PGMONETA_MCP_USE_TESTCONTAINERS=false
         ci_setup
         run_info_test_matrix
 

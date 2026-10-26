@@ -30,7 +30,26 @@ const MAX_FRAME_LEN: usize = 64 * 1024 * 1024;
 #[derive(Serialize, Clone, Debug)]
 struct PingRequest;
 
-pub async fn init_config() -> ContainerAsync<GenericImage> {
+pub struct TestEnv(Option<ContainerAsync<GenericImage>>);
+
+/// Containers are used unless PGMONETA_MCP_USE_TESTCONTAINERS is 0/false/no/off.
+fn use_testcontainers() -> bool {
+    std::env::var("PGMONETA_MCP_USE_TESTCONTAINERS")
+        .map(|v| !matches!(v.to_lowercase().as_str(), "0" | "false" | "no" | "off"))
+        .unwrap_or(true)
+}
+
+pub async fn init_config() -> TestEnv {
+    if !use_testcontainers() {
+        let host = env_or_default("PGMONETA_MCP_TEST_HOST", "localhost");
+        let port = env_or_default("PGMONETA_MCP_TEST_PORT", "5002")
+            .parse::<i32>()
+            .expect("PGMONETA_MCP_TEST_PORT must be a number");
+        init_config_for_pgmoneta(&host, port);
+        wait_for_pgmoneta(None).await;
+        return TestEnv(None);
+    }
+
     let image_name = std::env::var("PGMONETA_MCP_TEST_IMAGE")
         .unwrap_or_else(|_| "pgmoneta-mcp-test-suite".to_string());
     let container = GenericImage::new(image_name.as_str(), "latest")
@@ -73,16 +92,16 @@ pub async fn init_config() -> ContainerAsync<GenericImage> {
         .await
         .expect("mapped pgmoneta port should be available");
     init_config_for_pgmoneta(&host, i32::from(port));
-    wait_for_pgmoneta(&container).await;
+    wait_for_pgmoneta(Some(&container)).await;
 
-    container
+    TestEnv(Some(container))
 }
 
 fn env_or_default(name: &str, default: &str) -> String {
     std::env::var(name).unwrap_or_else(|_| default.to_string())
 }
 
-pub async fn prepare_compress_fixture(container: &ContainerAsync<GenericImage>) {
+pub async fn prepare_compress_fixture(container: &TestEnv) {
     prepare_file_fixture(
         container,
         "printf 'pgmoneta MCP compression fixture\\n' > /tmp/pgmoneta-mcp-compress-fixture.txt && chmod 644 /tmp/pgmoneta-mcp-compress-fixture.txt && chown pgmoneta:pgmoneta /tmp/pgmoneta-mcp-compress-fixture.txt",
@@ -90,7 +109,7 @@ pub async fn prepare_compress_fixture(container: &ContainerAsync<GenericImage>) 
     .await;
 }
 
-pub async fn prepare_decompress_fixture(container: &ContainerAsync<GenericImage>) {
+pub async fn prepare_decompress_fixture(container: &TestEnv) {
     prepare_file_fixture(
         container,
         "printf 'pgmoneta MCP decompression fixture\\n' > /tmp/pgmoneta-mcp-decompress-fixture.txt && zstd -q -f /tmp/pgmoneta-mcp-decompress-fixture.txt -o /tmp/pgmoneta-mcp-decompress-fixture.txt.zstd && rm -f /tmp/pgmoneta-mcp-decompress-fixture.txt && chmod 644 /tmp/pgmoneta-mcp-decompress-fixture.txt.zstd && chown pgmoneta:pgmoneta /tmp/pgmoneta-mcp-decompress-fixture.txt.zstd",
@@ -98,7 +117,7 @@ pub async fn prepare_decompress_fixture(container: &ContainerAsync<GenericImage>
     .await;
 }
 
-pub async fn prepare_encrypt_fixture(container: &ContainerAsync<GenericImage>) {
+pub async fn prepare_encrypt_fixture(container: &TestEnv) {
     prepare_file_fixture(
         container,
         "printf 'pgmoneta MCP encryption fixture\\n' > /tmp/pgmoneta-mcp-encrypt-fixture.txt && chmod 644 /tmp/pgmoneta-mcp-encrypt-fixture.txt && chown pgmoneta:pgmoneta /tmp/pgmoneta-mcp-encrypt-fixture.txt",
@@ -106,7 +125,7 @@ pub async fn prepare_encrypt_fixture(container: &ContainerAsync<GenericImage>) {
     .await;
 }
 
-pub async fn prepare_decrypt_fixture(container: &ContainerAsync<GenericImage>) {
+pub async fn prepare_decrypt_fixture(container: &TestEnv) {
     prepare_file_fixture(
         container,
         "printf 'pgmoneta MCP decryption fixture\\n' > /tmp/pgmoneta-mcp-decrypt-fixture.txt && chmod 644 /tmp/pgmoneta-mcp-decrypt-fixture.txt && chown pgmoneta:pgmoneta /tmp/pgmoneta-mcp-decrypt-fixture.txt",
@@ -114,7 +133,10 @@ pub async fn prepare_decrypt_fixture(container: &ContainerAsync<GenericImage>) {
     .await;
 }
 
-async fn prepare_file_fixture(container: &ContainerAsync<GenericImage>, script: &str) {
+async fn prepare_file_fixture(env: &TestEnv, script: &str) {
+    let Some(container) = env.0.as_ref() else {
+        return;
+    };
     let command = ExecCommand::new(["/bin/bash", "-lc", script]);
     let mut result = container
         .exec(command)
@@ -134,7 +156,7 @@ async fn prepare_file_fixture(container: &ContainerAsync<GenericImage>, script: 
     );
 }
 
-async fn wait_for_pgmoneta(container: &ContainerAsync<GenericImage>) {
+async fn wait_for_pgmoneta(container: Option<&ContainerAsync<GenericImage>>) {
     let deadline = Instant::now() + Duration::from_secs(90);
 
     loop {
@@ -158,8 +180,13 @@ async fn wait_for_pgmoneta(container: &ContainerAsync<GenericImage>) {
         };
 
         if Instant::now() >= deadline {
-            let stdout = container.stdout_to_vec().await.unwrap_or_default();
-            let stderr = container.stderr_to_vec().await.unwrap_or_default();
+            let (stdout, stderr) = match container {
+                Some(c) => (
+                    c.stdout_to_vec().await.unwrap_or_default(),
+                    c.stderr_to_vec().await.unwrap_or_default(),
+                ),
+                None => Default::default(),
+            };
             panic!(
                 "pgmoneta did not become ready before the startup timeout; last ping error: {last_error}\ncontainer stdout:\n{}\ncontainer stderr:\n{}",
                 String::from_utf8_lossy(&stdout),
